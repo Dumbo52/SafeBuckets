@@ -1,30 +1,26 @@
 package nu.nerd.SafeBuckets;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.persistence.PersistenceException;
-
-import nu.nerd.SafeBuckets.database.SafeLiquid;
-import nu.nerd.SafeBuckets.database.SafeLiquidTable;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class SafeBuckets extends JavaPlugin {
 
     private final SafeBucketsListener l = new SafeBucketsListener(this);
-    public SafeLiquidTable table;
     public static final Logger log = Logger.getLogger("Minecraft");
-    public HashMap<String, HashSet<Long>> cachedSafeBlocks = new HashMap<String, HashSet<Long>>();
-    //public HashSet<Long> cachedSafeBlocks = new HashSet<Long>();
+    private final FixedMetadataValue SAFE = new FixedMetadataValue(this, true);
+    private final FixedMetadataValue UNSAFE = new FixedMetadataValue(this, false);
+    public HashMap<Location, Long> blockCache = new HashMap<Location, Long>();
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
@@ -49,71 +45,47 @@ public class SafeBuckets extends JavaPlugin {
         PluginManager pm = this.getServer().getPluginManager();
         pm.registerEvents(l, this);
 
-        setupDatabase();
-        table = new SafeLiquidTable(this);
-
         log.log(Level.INFO, "[" + getDescription().getName() + "] " + getDescription().getVersion() + " enabled.");
-    }
-
-    public boolean setupDatabase() {
-        try {
-            getDatabase().find(SafeLiquid.class).findRowCount();
-            List<SafeLiquid> liquids = getDatabase().find(SafeLiquid.class).findList();
-            for (SafeLiquid l : liquids) {
-                addSafeLiquidToCache(l);
-            }
-        } catch (PersistenceException ex) {
-            getLogger().log(Level.INFO, "First run, initializing database.");
-            installDDL();
-            return true;
-        }
-
-        return false;
-    }
-
-    public void addBlockToCacheAndDB(Block block) {
-        SafeLiquid stat = new SafeLiquid();
-        stat.setWorld(block.getWorld().getName());
-        stat.setX(block.getX());
-        stat.setY(block.getY());
-        stat.setZ(block.getZ());
-        table.save(stat);
-        
-        addSafeLiquidToCache(stat);
-    }
-    
-    public void removeSafeLiquidFromCacheAndDB(Block block) {
-        String world = block.getWorld().getName();
-        Long l = Util.GetHashCode(block.getX(), block.getY(), block.getZ());
-        if (cachedSafeBlocks.containsKey(world)) {
-            cachedSafeBlocks.get(world).remove(l);
-        }
-        
-        table.removeSafeLiquid(block);
     }
     
     public boolean isSafeLiquid(Block block) {
-        String world = block.getWorld().getName();
-        Long l = Util.GetHashCode(block.getX(), block.getY(), block.getZ());
-        
-        if (cachedSafeBlocks.containsKey(world)) {
-            return cachedSafeBlocks.get(world).contains(l);
-        }
-        return false;
+    	// Using block data values works better for fluids because this method
+    	// doesn't use any additional data. Metadata seems to work better for
+    	// dispensers, which isn't a problem since dispensers won't be used
+    	// nearly as commonly as water or lava.
+        return ((block.getType() == Material.STATIONARY_WATER || block.getType() == Material.STATIONARY_LAVA) && block.getData() == 8) || (block.getType() == Material.DISPENSER && block.hasMetadata("safe") && block.getMetadata("safe").get(0).asBoolean());
     }
-
-    public void addSafeLiquidToCache(SafeLiquid liquid) {
-        String world = liquid.getWorld();
-        if (!cachedSafeBlocks.containsKey(world)) {
-            cachedSafeBlocks.put(world, new HashSet<Long>());
-        }
-        cachedSafeBlocks.get(world).add(Util.GetHashCode(liquid.getX(), liquid.getY(), liquid.getZ()));
+    
+    public void setBlockSafe(Block block) {
+    	if (block.getType() == Material.WATER || block.getType() == Material.STATIONARY_WATER) {
+    		block.setType(Material.STATIONARY_WATER);
+    		block.setData((byte)8);
+    	}
+    	if (block.getType() == Material.LAVA || block.getType() == Material.STATIONARY_LAVA) {
+    		block.setType(Material.STATIONARY_LAVA);
+    		block.setData((byte)8);
+    	}
+    	if (block.getType() == Material.DISPENSER) {
+    		block.setMetadata("safe", SAFE);
+    	}
     }
-
-    @Override
-    public ArrayList<Class<?>> getDatabaseClasses() {
-        ArrayList<Class<?>> list = new ArrayList<Class<?>>();
-        list.add(SafeLiquid.class);
-        return list;
+    
+    public void setBlockUnsafe(Block block) {
+    	if (block.getType() == Material.STATIONARY_WATER && block.getData() == 8) {
+    		block.setType(Material.WATER);
+    		block.setData((byte)0);
+    	}
+    	if (block.getType() == Material.STATIONARY_LAVA && block.getData() == 8) {
+    		block.setType(Material.LAVA);
+    		block.setData((byte)0);
+    	}
+    	if (block.getType() == Material.DISPENSER) {
+    		block.setMetadata("safe", UNSAFE);
+    	}
     }
+    
+    public void queueSafeBlock(Block block) {
+    	blockCache.put(block.getLocation(), block.getWorld().getTime());
+    }
+    
 }

@@ -46,7 +46,6 @@ public class SafeBucketsListener implements Listener {
         }
         Block block = event.getBlock();
         if (plugin.blockCache.containsKey(block.getLocation())) {
-        	System.out.println("Setting block safe (Physics): " + block);
         	if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 10 || block.getType() == Material.DISPENSER) {
         		plugin.setBlockSafe(block);
         		event.setCancelled(true);
@@ -87,23 +86,17 @@ public class SafeBucketsListener implements Listener {
 	        // emulate the behavior with safe fluids.
 	        else if (mat == Material.BUCKET) {
 	        	if (plugin.getConfig().getBoolean("dispenser.enabled")) {
-	        		System.out.println("Step 1");
 	        		if (blockDispense.isLiquid() && blockDispense.getData() == 8) {
-		        		System.out.println("Step 2");
 		        		Inventory inv = new CraftInventory((TileEntityDispenser)(((CraftWorld)blockDispenser.getWorld()).getTileEntityAt(blockDispenser.getX(), blockDispenser.getY(), blockDispenser.getZ())));
 		        		Material m = null;
 		        		if (blockDispense.getType() == Material.STATIONARY_WATER)
 		        			m = Material.WATER_BUCKET;
 		        		if (blockDispense.getType() == Material.STATIONARY_LAVA)
 		        			m = Material.LAVA_BUCKET;
-		        		System.out.println("===" + event.getItem());
 		        		ItemStack stack = inv.getItem(inv.first(Material.BUCKET));
-		        		System.out.println(stack.getAmount());
 		        		if (stack.getAmount() == 0) {
-		        			System.out.println("Setting 1");
 		        			stack.setType(m);
 		        		} else {
-		        			System.out.println("Setting multiple");
 		        			stack.setAmount(stack.getAmount() - 1);
 		        			if (!inv.addItem(new ItemStack(m)).isEmpty()) {
 		        				(new DispenseBehaviorItem()).a(new SourceBlock((World)blockDispenser.getWorld(), blockDispenser.getX(), blockDispenser.getY(), blockDispenser.getZ()), new net.minecraft.server.v1_7_R1.ItemStack(Item.d(m.getId()), 1));
@@ -159,7 +152,6 @@ public class SafeBucketsListener implements Listener {
         Block block = event.getBlockPlaced();
 
         if (block.getType() == Material.DISPENSER) {
-            System.out.println(block.getLocation());
             plugin.queueSafeBlock(block);
         }
     }

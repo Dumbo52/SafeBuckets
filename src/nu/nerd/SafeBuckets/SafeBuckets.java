@@ -48,22 +48,22 @@ public class SafeBuckets extends JavaPlugin {
         log.log(Level.INFO, "[" + getDescription().getName() + "] " + getDescription().getVersion() + " enabled.");
     }
     
-    public boolean isSafeLiquid(Block block) {
+    public boolean isBlockSafe(Block block) {
     	// Using block data values works better for fluids because this method
     	// doesn't use any additional data. Metadata seems to work better for
     	// dispensers, which isn't a problem since dispensers won't be used
     	// nearly as commonly as water or lava.
-        return ((block.getType() == Material.STATIONARY_WATER || block.getType() == Material.STATIONARY_LAVA) && block.getData() == 8) || (block.getType() == Material.DISPENSER && block.hasMetadata("safe") && block.getMetadata("safe").get(0).asBoolean());
+        return ((block.getType() == Material.STATIONARY_WATER || block.getType() == Material.STATIONARY_LAVA) && block.getData() == 15) || (block.getType() == Material.DISPENSER && block.hasMetadata("safe") && block.getMetadata("safe").get(0).asBoolean());
     }
     
     public void setBlockSafe(Block block) {
     	if (block.getType() == Material.WATER || block.getType() == Material.STATIONARY_WATER) {
     		block.setType(Material.STATIONARY_WATER);
-    		block.setData((byte)8);
+    		block.setData((byte)15);
     	}
     	if (block.getType() == Material.LAVA || block.getType() == Material.STATIONARY_LAVA) {
     		block.setType(Material.STATIONARY_LAVA);
-    		block.setData((byte)8);
+    		block.setData((byte)15);
     	}
     	if (block.getType() == Material.DISPENSER) {
     		block.setMetadata("safe", SAFE);
@@ -71,11 +71,11 @@ public class SafeBuckets extends JavaPlugin {
     }
     
     public void setBlockUnsafe(Block block) {
-    	if (block.getType() == Material.STATIONARY_WATER && block.getData() == 8) {
+    	if (block.getType() == Material.STATIONARY_WATER && block.getData() == 15) {
     		block.setType(Material.WATER);
     		block.setData((byte)0);
     	}
-    	if (block.getType() == Material.STATIONARY_LAVA && block.getData() == 8) {
+    	if (block.getType() == Material.STATIONARY_LAVA && block.getData() == 15) {
     		block.setType(Material.LAVA);
     		block.setData((byte)0);
     	}

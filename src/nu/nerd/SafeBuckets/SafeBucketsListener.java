@@ -38,15 +38,14 @@ public class SafeBucketsListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPhysics(BlockPhysicsEvent event) {
-        Material mat = event.getBlock().getType();
-        if (mat == Material.STATIONARY_LAVA || mat == Material.STATIONARY_WATER) {
-            if (plugin.isSafeLiquid(event.getBlock())) {
+        Block block = event.getBlock();
+        if (event.getBlock().isLiquid()) {
+            if (plugin.isBlockSafe(event.getBlock()) && (!(event.getBlock().getType() == Material.STATIONARY_WATER && event.getChangedType() == Material.WATER) && !(event.getBlock().getType() == Material.STATIONARY_LAVA && event.getChangedType() == Material.LAVA) || event.getChangedType() == Material.AIR)) {
                 event.setCancelled(true);
             }
         }
-        Block block = event.getBlock();
         if (plugin.blockCache.containsKey(block.getLocation())) {
-        	if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 10 || block.getType() == Material.DISPENSER) {
+        	if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 40 || block.getType() == Material.DISPENSER) {
         		plugin.setBlockSafe(block);
         		event.setCancelled(true);
         	}
@@ -64,10 +63,10 @@ public class SafeBucketsListener implements Listener {
 
 	        if (mat == Material.LAVA_BUCKET || mat == Material.WATER_BUCKET) {
 	        	if (plugin.getConfig().getBoolean("dispenser.enabled")) {
-		        	if (plugin.getConfig().getBoolean("dispenser.safe") && plugin.isSafeLiquid(blockDispenser))
+		        	if (plugin.getConfig().getBoolean("dispenser.safe") && plugin.isBlockSafe(blockDispenser))
 		        		plugin.queueSafeBlock(blockDispense);
 		        	StringBuilder message = new StringBuilder("SafeBuckets: Dispensing (").append(event.getBlock().getX()).append(",").append(event.getBlock().getY()).append(",").append(event.getBlock().getZ()).append(") ");
-		        	if (!plugin.isSafeLiquid(blockDispenser))
+		        	if (!plugin.isBlockSafe(blockDispenser))
 		        		message.append("un");
 		        	message.append("safe");
 
@@ -86,7 +85,7 @@ public class SafeBucketsListener implements Listener {
 	        // emulate the behavior with safe fluids.
 	        else if (mat == Material.BUCKET) {
 	        	if (plugin.getConfig().getBoolean("dispenser.enabled")) {
-	        		if (blockDispense.isLiquid() && blockDispense.getData() == 8) {
+	        		if (blockDispense.isLiquid() && plugin.isBlockSafe(blockDispense)) {
 		        		Inventory inv = new CraftInventory((TileEntityDispenser)(((CraftWorld)blockDispenser.getWorld()).getTileEntityAt(blockDispenser.getX(), blockDispenser.getY(), blockDispenser.getZ())));
 		        		Material m = null;
 		        		if (blockDispense.getType() == Material.STATIONARY_WATER)
@@ -113,14 +112,16 @@ public class SafeBucketsListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockFromTo(BlockFromToEvent event) {
         Block block = event.getBlock();
-
-        if (plugin.isSafeLiquid(event.getBlock())) {
-            event.setCancelled(true);
+        
+        if (plugin.isBlockSafe(block)) {
+            if (event.getToBlock().getType() == Material.AIR) {
+                event.setCancelled(true);
+            }
         }
         
         if (plugin.blockCache.containsKey(block.getLocation())) {
-        	// This difference should always be 5
-        	if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 10) {
+        	// This difference should always be 5 for water and 30 for lava (10 in Nether).
+        	if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 40) {
         		plugin.setBlockSafe(block);
         		event.setCancelled(true);
         	}
@@ -175,7 +176,7 @@ public class SafeBucketsListener implements Listener {
 
     	if (event.isBlockInHand() && event.getItem().getType() == Material.getMaterial(plugin.getConfig().getString("tool.block")) && player.hasPermission("safebuckets.tools.block") && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
     		Block block = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().getBlock();
-    		if (plugin.isSafeLiquid(block)) {
+    		if (plugin.isBlockSafe(block)) {
     			player.sendMessage("SafeBuckets: (X=" + block.getX() + ", Z=" + block.getZ() + ", Y=" + block.getY() + ") safe");
     		} else {
     			player.sendMessage("SafeBuckets: (X=" + block.getX() + ", Z=" + block.getZ() + ", Y=" + block.getY() + ") unsafe");
@@ -184,7 +185,7 @@ public class SafeBucketsListener implements Listener {
     	}
     	else if (event.isBlockInHand() && event.getItem().getType() == Material.getMaterial(plugin.getConfig().getString("tool.block")) && player.hasPermission("safebuckets.tools.block") && event.getAction() == Action.LEFT_CLICK_BLOCK) {
     		Block block = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().getBlock();
-    		if (plugin.isSafeLiquid(block)) {
+    		if (plugin.isBlockSafe(block)) {
     			player.sendMessage("SafeBuckets: (X=" + block.getX() + ", Z=" + block.getZ() + ", Y=" + block.getY() + ") removed safe");
                 plugin.setBlockUnsafe(block);
     		} else {
@@ -195,7 +196,7 @@ public class SafeBucketsListener implements Listener {
     	}
     	else if (event.hasItem() && event.getItem().getType() == Material.getMaterial(plugin.getConfig().getString("tool.item")) && player.hasPermission("safebuckets.tools.item") && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
     		Block block = event.getClickedBlock();
-    		if (plugin.isSafeLiquid(block)) {
+    		if (plugin.isBlockSafe(block)) {
     			player.sendMessage("SafeBuckets: (X=" + block.getX() + ", Z=" + block.getZ() + ", Y=" + block.getY() + ") safe");
     		} else {
     			player.sendMessage("SafeBuckets: (X=" + block.getX() + ", Z=" + block.getZ() + ", Y=" + block.getY() + ") unsafe");
@@ -204,7 +205,7 @@ public class SafeBucketsListener implements Listener {
     	}
     	else if (event.hasItem() && event.getItem().getType() == Material.getMaterial(plugin.getConfig().getString("tool.item")) && player.hasPermission("safebuckets.tools.item") && event.getAction() == Action.LEFT_CLICK_BLOCK) {
     		Block block = event.getClickedBlock();
-    		if (plugin.isSafeLiquid(block)) {
+    		if (plugin.isBlockSafe(block)) {
     			player.sendMessage("SafeBuckets: (X=" + block.getX() + ", Z=" + block.getZ() + ", Y=" + block.getY() + ") removed safe");
                 plugin.setBlockUnsafe(block);
     		} else {

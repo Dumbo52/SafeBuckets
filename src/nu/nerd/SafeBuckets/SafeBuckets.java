@@ -21,6 +21,7 @@ public class SafeBuckets extends JavaPlugin {
     private final FixedMetadataValue SAFE = new FixedMetadataValue(this, true);
     private final FixedMetadataValue UNSAFE = new FixedMetadataValue(this, false);
     public HashMap<Location, Long> blockCache = new HashMap<Location, Long>();
+    public boolean flag = false;
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
@@ -57,6 +58,7 @@ public class SafeBuckets extends JavaPlugin {
     }
     
     public void setBlockSafe(Block block) {
+        flag = true;
     	if (block.getType() == Material.WATER || block.getType() == Material.STATIONARY_WATER) {
     		block.setType(Material.STATIONARY_WATER);
     		block.setData((byte)15);
@@ -68,9 +70,11 @@ public class SafeBuckets extends JavaPlugin {
     	if (block.getType() == Material.DISPENSER) {
     		block.setMetadata("safe", SAFE);
     	}
+    	flag = false;
     }
     
     public void setBlockUnsafe(Block block) {
+        flag = true;
     	if (block.getType() == Material.STATIONARY_WATER && block.getData() == 15) {
     		block.setType(Material.WATER);
     		block.setData((byte)0);
@@ -82,6 +86,7 @@ public class SafeBuckets extends JavaPlugin {
     	if (block.getType() == Material.DISPENSER) {
     		block.setMetadata("safe", UNSAFE);
     	}
+    	flag = false;
     }
     
     public void queueSafeBlock(Block block) {

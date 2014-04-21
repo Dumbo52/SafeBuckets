@@ -8,6 +8,7 @@ import net.minecraft.server.v1_7_R1.World;
 
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.v1_7_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_7_R1.inventory.CraftInventory;
 import org.bukkit.enchantments.Enchantment;
@@ -38,18 +39,50 @@ public class SafeBucketsListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPhysics(BlockPhysicsEvent event) {
+        if (plugin.flag) {
+            event.setCancelled(true);
+            return;
+        }
         Block block = event.getBlock();
-        if (event.getBlock().isLiquid()) {
-            if (plugin.isBlockSafe(event.getBlock()) && (!(event.getBlock().getType() == Material.STATIONARY_WATER && event.getChangedType() == Material.WATER) && !(event.getBlock().getType() == Material.STATIONARY_LAVA && event.getChangedType() == Material.LAVA) || event.getChangedType() == Material.AIR)) {
+        if (block.getType() == Material.DISPENSER && plugin.blockCache.containsKey(block.getLocation())) {
+            if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 40 || block.getType() == Material.DISPENSER) {
+                plugin.setBlockSafe(block);
                 event.setCancelled(true);
             }
+            plugin.blockCache.remove(block.getLocation());
+            return;
         }
-        if (plugin.blockCache.containsKey(block.getLocation())) {
-        	if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 40 || block.getType() == Material.DISPENSER) {
-        		plugin.setBlockSafe(block);
-        		event.setCancelled(true);
-        	}
-        	plugin.blockCache.remove(block.getLocation());
+        if (block.isLiquid()) {
+            if (plugin.isBlockSafe(block)) {
+                if (event.getChangedType().compareTo(Material.WATER) < 0 || event.getChangedType().compareTo(Material.STATIONARY_LAVA) > 0) {
+                    event.setCancelled(true);
+                }
+                else if (block.getType().compareTo(event.getChangedType()) == 1) {
+                    Block above = block.getRelative(BlockFace.UP);
+                    if (!(above.getType() == event.getChangedType() && above.getData() % 8 == 7)) {
+                        plugin.setBlockUnsafe(block);
+                        event.setCancelled(true);
+                    }
+                }
+                else if (block.getType() == event.getChangedType()) {
+                    Block[] adj = new Block[]{block.getRelative(BlockFace.NORTH), block.getRelative(BlockFace.SOUTH), block.getRelative(BlockFace.WEST), block.getRelative(BlockFace.EAST)};
+                    for (Block b : adj) {
+                        if (b.getType().compareTo(block.getType()) == -1 && b.getData() == block.getData() || b.getType() == block.getType() && b.getData() == 0) {
+                            plugin.setBlockSafe(b);
+                        }
+                    }
+                    event.setCancelled(true);
+                }
+            }
+            else if (block.getData() == 15) {
+                if (event.getChangedType().compareTo(block.getType()) == 1) {
+                    plugin.setBlockSafe(block);
+                    event.setCancelled(true);
+                }
+                else if (event.getChangedType() == block.getType()){
+                    block.setData((byte) 14);
+                }
+            }
         }
     }
 
@@ -113,19 +146,30 @@ public class SafeBucketsListener implements Listener {
     public void onBlockFromTo(BlockFromToEvent event) {
         Block block = event.getBlock();
         
+        if (plugin.blockCache.containsKey(block.getLocation())) {
+            // This difference should always be 5 for water and 30 for lava (10 in Nether).
+            if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 40) {
+                plugin.setBlockSafe(block);
+                event.setCancelled(true);
+            }
+            plugin.blockCache.remove(block.getLocation());
+            return;
+        }
         if (plugin.isBlockSafe(block)) {
             if (event.getToBlock().getType() == Material.AIR) {
                 event.setCancelled(true);
             }
         }
-        
-        if (plugin.blockCache.containsKey(block.getLocation())) {
-        	// This difference should always be 5 for water and 30 for lava (10 in Nether).
-        	if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 40) {
-        		plugin.setBlockSafe(block);
-        		event.setCancelled(true);
-        	}
-        	plugin.blockCache.remove(block.getLocation());
+        else {
+            if (plugin.isBlockSafe(event.getToBlock())) {
+                plugin.setBlockUnsafe(event.getToBlock());
+                event.setCancelled(true);
+            }
+            if (block.getData() == 15) {
+                if (event.getToBlock().getType() == block.getType() && event.getToBlock().getData() != 15) {
+                    block.setData((byte) 14);
+                }
+            }
         }
     }
     

@@ -7,6 +7,9 @@ tool:
 bucket:
   enabled: true
   safe: true
+  place-safe: true
 dispenser:
   enabled: true
   safe: true
+  place-safe: true
+  whitelist: true

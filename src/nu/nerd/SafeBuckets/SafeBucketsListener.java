@@ -147,8 +147,7 @@ public class SafeBucketsListener implements Listener {
         if (plugin.blockCache.containsKey(block.getLocation())) {
             if (plugin.BUCKET_PLACE_SAFE) {
                 // This difference should always be 5 for water and 30 for lava
-                // (10
-                // in Nether).
+                // (10 in Nether).
                 if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 40) {
                     plugin.setBlockSafe(block, true);
                     event.setCancelled(true);
@@ -229,7 +228,7 @@ public class SafeBucketsListener implements Listener {
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
 
-        if (event.isBlockInHand() && event.getItem().getType() == plugin.TOOL_BLOCK && player.hasPermission("safebuckets.tools.block") && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+        if (event.isBlockInHand() && event.getItem().getType() == plugin.TOOL_BLOCK && player.hasPermission("safebuckets.tools.block.use") && event.getAction() == Action.RIGHT_CLICK_BLOCK && plugin.canUseToolBlock(player)) {
             Block block = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().getBlock();
             StringBuilder msg = new StringBuilder("SafeBuckets: ");
             String coords = new StringBuilder("(X=").append(block.getX()).append(", Y=").append(block.getY()).append(", Z=").append(block.getZ()).append(")").toString();
@@ -242,7 +241,7 @@ public class SafeBucketsListener implements Listener {
             player.sendMessage(msg.toString());
             event.setCancelled(true);
         }
-        else if (event.isBlockInHand() && event.getItem().getType() == plugin.TOOL_BLOCK && player.hasPermission("safebuckets.tools.block") && event.getAction() == Action.LEFT_CLICK_BLOCK) {
+        else if (event.isBlockInHand() && event.getItem().getType() == plugin.TOOL_BLOCK && player.hasPermission("safebuckets.tools.block.set") && event.getAction() == Action.LEFT_CLICK_BLOCK && plugin.canUseToolBlock(player)) {
             Block block = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().getBlock();
             StringBuilder msg = new StringBuilder("SafeBuckets: ");
             String coords = new StringBuilder("(X=").append(block.getX()).append(", Y=").append(block.getY()).append(", Z=").append(block.getZ()).append(")").toString();
@@ -256,7 +255,7 @@ public class SafeBucketsListener implements Listener {
             player.sendMessage(msg.toString());
             event.setCancelled(true);
         }
-        else if (event.hasItem() && event.getItem().getType() == plugin.TOOL_ITEM && player.hasPermission("safebuckets.tools.item") && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+        else if (event.hasItem() && event.getItem().getType() == plugin.TOOL_ITEM && player.hasPermission("safebuckets.tools.item.use") && event.getAction() == Action.RIGHT_CLICK_BLOCK && plugin.canUseTool(player)) {
             Block block = event.getClickedBlock();
             StringBuilder msg = new StringBuilder("SafeBuckets: ");
             String coords = new StringBuilder("(X=").append(block.getX()).append(", Y=").append(block.getY()).append(", Z=").append(block.getZ()).append(")").toString();
@@ -269,7 +268,7 @@ public class SafeBucketsListener implements Listener {
             player.sendMessage(msg.toString());
             event.setCancelled(true);
         }
-        else if (event.hasItem() && event.getItem().getType() == plugin.TOOL_ITEM && player.hasPermission("safebuckets.tools.item") && event.getAction() == Action.LEFT_CLICK_BLOCK) {
+        else if (event.hasItem() && event.getItem().getType() == plugin.TOOL_ITEM && player.hasPermission("safebuckets.tools.item.set") && event.getAction() == Action.LEFT_CLICK_BLOCK && plugin.canUseTool(player)) {
             Block block = event.getClickedBlock();
             StringBuilder msg = new StringBuilder("SafeBuckets: ");
             String coords = new StringBuilder("(X=").append(block.getX()).append(", Y=").append(block.getY()).append(", Z=").append(block.getZ()).append(")").toString();

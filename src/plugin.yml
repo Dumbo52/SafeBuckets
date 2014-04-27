@@ -13,19 +13,38 @@ permissions:
   safebuckets.tools.*:
     description: Gives access to all SafeBuckets tools
     children:
-      safebuckets.tools.block: true
-      safebuckets.tools.item: true
-  safebuckets.tools.block:
-    description: Gives access to the SafeBuckets block inspector tool
-  safebuckets.tools.item:
-    description: Gives access to the SafeBuckets item inspector tool
+      safebuckets.tools.block.*: true
+      safebuckets.tools.item.*: true
+  safebuckets.tools.block.*:
+    description: Gives full access to the SafeBuckets block inspector tool
+    children:
+      safebuckets.tools.block.use: true
+      safebuckets.tools.block.set: true
+      safebuckets.tools.block.give: true
+  safebuckets.tools.block.use:
+    description: Allows use of the SafeBuckets block inspector tool
+  safebuckets.tools.block.set:
+    description: Allows player to set a fluid flowing or not flowing with the SafeBuckets block inspector tool
+  safebuckets.tools.block.give:
+    description: Allows player to give themself the SafeBuckets block inspector tool
+  safebuckets.tools.item.*:
+    description: Gives full access to the SafeBuckets item inspector tool
+    children:
+      safebuckets.tools.item.use: true
+      safebuckets.tools.item.set: true
+      safebuckets.tools.item.give: true
+  safebuckets.tools.item.use:
+    description: Allows use of the SafeBuckets item inspector tool
+  safebuckets.tools.item.set:
+    description: Allows player to register or unregister a dispenser with the SafeBuckets item inspector tool
+  safebuckets.tools.item.give:
+    description: Allows player to give themself the SafeBuckets item inspector tool
   safebuckets.reload:
     description: Allows use of SafeBuckets reload command
   safebuckets.debug:
-    description: Shows active SafeBuckets debug informaiton
+    description: Shows active SafeBuckets debug information
 commands:
-  sbrl:
-    description: SafeBuckets Reload
-    permission: safebuckets.reload
+  sb:
+    description: SafeBuckets commands
     usage: |
-           /<command> : Reloads SafeBucket config
+           /<command> help

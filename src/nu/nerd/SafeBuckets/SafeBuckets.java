@@ -1,7 +1,9 @@
 package nu.nerd.SafeBuckets;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -10,6 +12,8 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.PluginManager;
@@ -22,6 +26,7 @@ public class SafeBuckets extends JavaPlugin {
 
     public Material TOOL_BLOCK;
     public Material TOOL_ITEM;
+    public boolean TOOL_DEFAULT_ON;
 
     public boolean BUCKET_ENABLED;
     public boolean BUCKET_SAFE;
@@ -33,17 +38,137 @@ public class SafeBuckets extends JavaPlugin {
     public boolean DISPENSER_WHITELIST;
 
     private final SafeBucketsListener l = new SafeBucketsListener(this);
+    private Set<String> toolPlayers = new HashSet<String>();
+    private Set<String> toolblockPlayers = new HashSet<String>();
+
     public static final Logger log = Logger.getLogger("Minecraft");
     public HashMap<Location, Long> blockCache = new HashMap<Location, Long>();
     public boolean flag = false;
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
-        if (command.getName().equalsIgnoreCase("sbrl")) {
-            reloadConfig();
-            loadConfig();
-            sender.sendMessage("SafeBuckets: reloaded config");
-            log.info("SafeBuckets: reloaded config");
+        if (command.getName().equalsIgnoreCase("sb") || command.getName().equalsIgnoreCase("safebuckets")) {
+            if (args.length > 0) {
+                if (args[0].equalsIgnoreCase("reload")) {
+                    reloadConfig();
+                    loadConfig();
+                    sender.sendMessage("SafeBuckets: reloaded config");
+                    log.info("SafeBuckets: reloaded config");
+                    return true;
+                }
+                if (args[0].equalsIgnoreCase("tool")) {
+                    if (sender instanceof Player) {
+                        Player player = (Player) sender;
+                        if (args.length == 1) {
+                            if (player.hasPermission("safebuckets.tools.item.use")) {
+                                if (canUseTool(player)) {
+                                    setToolStatus(toolPlayers, player.getName(), false);
+                                    player.sendMessage("Tool disabled.");
+                                }
+                                else {
+                                    setToolStatus(toolPlayers, player.getName(), true);
+                                    player.sendMessage("Tool enabled.");
+                                }
+                            }
+                            else {
+                                player.sendMessage("You do not have permission to run this command.");
+                            }
+                        }
+                        else if (args.length == 2) {
+                            if (args[1].equalsIgnoreCase("give")) {
+                                if (player.hasPermission("safebuckets.tools.item.give")) {
+                                    player.getInventory().addItem(new ItemStack(TOOL_ITEM));
+                                }
+                                else {
+                                    player.sendMessage("You do not have permission to run this command.");
+                                }
+                            }
+                            if (args[1].equalsIgnoreCase("on")) {
+                                if (player.hasPermission("safebuckets.tools.item.use")) {
+                                    setToolStatus(toolPlayers, player.getName(), true);
+                                    player.sendMessage("Tool enabled.");
+                                }
+                                else {
+                                    player.sendMessage("You do not have permission to run this command.");
+                                }
+                            }
+                            if (args[1].equalsIgnoreCase("off")) {
+                                if (player.hasPermission("safebuckets.tools.item.use")) {
+                                    setToolStatus(toolPlayers, player.getName(), false);
+                                    player.sendMessage("Tool disabled.");
+                                }
+                                else {
+                                    player.sendMessage("You do not have permission to run this command.");
+                                }
+                            }
+                        }
+                        else {
+                            player.sendMessage("Too many arguments. Type \"/sb help\" for help.");
+                        }
+                    }
+                    else {
+                        sender.sendMessage("You must be a player to run this command.");
+                    }
+                    return true;
+                }
+                if (args[0].equalsIgnoreCase("toolblock")) {
+                    if (sender instanceof Player) {
+                        Player player = (Player) sender;
+                        if (args.length == 1) {
+                            if (player.hasPermission("safebuckets.tools.block.use")) {
+                                if (canUseToolBlock(player)) {
+                                    setToolStatus(toolblockPlayers, player.getName(), false);
+                                    player.sendMessage("Tool block disabled.");
+                                }
+                                else {
+                                    setToolStatus(toolblockPlayers, player.getName(), true);
+                                    player.sendMessage("Tool block enabled.");
+                                }
+                            }
+                            else {
+                                player.sendMessage("You do not have permission to run this command.");
+                            }
+                        }
+                        else if (args.length == 2) {
+                            if (args[1].equalsIgnoreCase("give")) {
+                                if (player.hasPermission("safebuckets.tools.block.give")) {
+                                    player.getInventory().addItem(new ItemStack(TOOL_BLOCK));
+                                }
+                                else {
+                                    player.sendMessage("You do not have permission to run this command.");
+                                }
+                            }
+                            if (args[1].equalsIgnoreCase("on")) {
+                                if (player.hasPermission("safebuckets.tools.block.use")) {
+                                    setToolStatus(toolblockPlayers, player.getName(), true);
+                                    player.sendMessage("Tool block enabled.");
+                                }
+                                else {
+                                    player.sendMessage("You do not have permission to run this command.");
+                                }
+                            }
+                            if (args[1].equalsIgnoreCase("off")) {
+                                if (player.hasPermission("safebuckets.tools.block.use")) {
+                                    setToolStatus(toolblockPlayers, player.getName(), false);
+                                    player.sendMessage("Tool block disabled.");
+                                }
+                                else {
+                                    player.sendMessage("You do not have permission to run this command.");
+                                }
+                            }
+                        }
+                        else {
+                            player.sendMessage("Too many arguments. Type \"/sb help\" for help.");
+                        }
+                    }
+                    else {
+                        sender.sendMessage("You must be a player to run this command.");
+                    }
+                    return true;
+                }
+            }
+            sender.sendMessage("Unknown command. Type \"/sb help\" for help.");
+            return true;
         }
 
         return false;
@@ -70,6 +195,7 @@ public class SafeBuckets extends JavaPlugin {
         DEBUG_PLAYERS = getConfig().getBoolean("debug.players");
         TOOL_BLOCK = Material.getMaterial(getConfig().getString("tool.block"));
         TOOL_ITEM = Material.getMaterial(getConfig().getString("tool.item"));
+        TOOL_DEFAULT_ON = getConfig().getBoolean("tool.default-on");
         BUCKET_ENABLED = getConfig().getBoolean("bucket.enabled");
         BUCKET_SAFE = getConfig().getBoolean("bucket.safe");
         BUCKET_PLACE_SAFE = getConfig().getBoolean("bucket.place-safe");
@@ -122,7 +248,6 @@ public class SafeBuckets extends JavaPlugin {
     }
 
     public boolean isRegistered(Block block) {
-        System.out.println(block.getMetadata("reg"));
         if (block.getType() == Material.DISPENSER) {
             if (block.hasMetadata("reg")) {
                 List<MetadataValue> meta = block.getMetadata("reg");
@@ -133,6 +258,23 @@ public class SafeBuckets extends JavaPlugin {
             }
         }
         return false;
+    }
+
+    public void setToolStatus(Set<String> pList, String player, boolean status) {
+        if (status == TOOL_DEFAULT_ON) {
+            pList.remove(player);
+        }
+        else {
+            pList.add(player);
+        }
+    }
+
+    public boolean canUseTool(Player player) {
+        return toolPlayers.contains(player.getName()) != TOOL_DEFAULT_ON;
+    }
+
+    public boolean canUseToolBlock(Player player) {
+        return toolblockPlayers.contains(player.getName()) != TOOL_DEFAULT_ON;
     }
 
 }

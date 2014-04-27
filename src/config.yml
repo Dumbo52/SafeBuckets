@@ -4,6 +4,7 @@ debug:
 tool:
   block: LAPIS_ORE
   item: BLAZE_ROD
+  default-on: true
 bucket:
   enabled: true
   safe: true

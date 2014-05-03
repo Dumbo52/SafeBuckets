@@ -7,9 +7,12 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -18,6 +21,10 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.sk89q.worldedit.bukkit.WorldEditPlugin;
+import com.sk89q.worldedit.bukkit.selections.CuboidSelection;
+import com.sk89q.worldedit.bukkit.selections.Selection;
 
 public class SafeBuckets extends JavaPlugin {
 
@@ -37,9 +44,12 @@ public class SafeBuckets extends JavaPlugin {
     public boolean DISPENSER_PLACE_SAFE;
     public boolean DISPENSER_WHITELIST;
 
+    public int FLOW_MAX_VOLUME;
+
     private final SafeBucketsListener l = new SafeBucketsListener(this);
     private Set<String> toolPlayers = new HashSet<String>();
     private Set<String> toolblockPlayers = new HashSet<String>();
+    private WorldEditPlugin worldedit;
 
     public static final Logger log = Logger.getLogger("Minecraft");
     public HashMap<Location, Long> blockCache = new HashMap<Location, Long>();
@@ -52,8 +62,8 @@ public class SafeBuckets extends JavaPlugin {
                 if (args[0].equalsIgnoreCase("reload")) {
                     reloadConfig();
                     loadConfig();
-                    sender.sendMessage("SafeBuckets: reloaded config");
-                    log.info("SafeBuckets: reloaded config");
+                    message(sender, "Reloaded config.");
+                    log.info("SafeBuckets: Reloaded config.");
                     return true;
                 }
                 if (args[0].equalsIgnoreCase("tool")) {
@@ -63,15 +73,15 @@ public class SafeBuckets extends JavaPlugin {
                             if (player.hasPermission("safebuckets.tools.item.use")) {
                                 if (canUseTool(player)) {
                                     setToolStatus(toolPlayers, player.getName(), false);
-                                    player.sendMessage("Tool disabled.");
+                                    message(player, "Tool disabled.");
                                 }
                                 else {
                                     setToolStatus(toolPlayers, player.getName(), true);
-                                    player.sendMessage("Tool enabled.");
+                                    message(player, "Tool enabled.");
                                 }
                             }
                             else {
-                                player.sendMessage("You do not have permission to run this command.");
+                                message(player, "You do not have permission to run this command.");
                             }
                         }
                         else if (args.length == 2) {
@@ -80,34 +90,34 @@ public class SafeBuckets extends JavaPlugin {
                                     player.getInventory().addItem(new ItemStack(TOOL_ITEM));
                                 }
                                 else {
-                                    player.sendMessage("You do not have permission to run this command.");
+                                    message(player, "You do not have permission to run this command.");
                                 }
                             }
                             if (args[1].equalsIgnoreCase("on")) {
                                 if (player.hasPermission("safebuckets.tools.item.use")) {
                                     setToolStatus(toolPlayers, player.getName(), true);
-                                    player.sendMessage("Tool enabled.");
+                                    message(player, "Tool enabled.");
                                 }
                                 else {
-                                    player.sendMessage("You do not have permission to run this command.");
+                                    message(player, "You do not have permission to run this command.");
                                 }
                             }
                             if (args[1].equalsIgnoreCase("off")) {
                                 if (player.hasPermission("safebuckets.tools.item.use")) {
                                     setToolStatus(toolPlayers, player.getName(), false);
-                                    player.sendMessage("Tool disabled.");
+                                    message(player, "Tool disabled.");
                                 }
                                 else {
-                                    player.sendMessage("You do not have permission to run this command.");
+                                    message(player, "You do not have permission to run this command.");
                                 }
                             }
                         }
                         else {
-                            player.sendMessage("Too many arguments. Type \"/sb help\" for help.");
+                            message(player, "Too many arguments. Type \"/sb help\" for help.");
                         }
                     }
                     else {
-                        sender.sendMessage("You must be a player to run this command.");
+                        message(sender, "You must be a player to run this command.");
                     }
                     return true;
                 }
@@ -118,15 +128,15 @@ public class SafeBuckets extends JavaPlugin {
                             if (player.hasPermission("safebuckets.tools.block.use")) {
                                 if (canUseToolBlock(player)) {
                                     setToolStatus(toolblockPlayers, player.getName(), false);
-                                    player.sendMessage("Tool block disabled.");
+                                    message(player, "Tool block disabled.");
                                 }
                                 else {
                                     setToolStatus(toolblockPlayers, player.getName(), true);
-                                    player.sendMessage("Tool block enabled.");
+                                    message(player, "Tool block enabled.");
                                 }
                             }
                             else {
-                                player.sendMessage("You do not have permission to run this command.");
+                                message(player, "You do not have permission to run this command.");
                             }
                         }
                         else if (args.length == 2) {
@@ -135,39 +145,101 @@ public class SafeBuckets extends JavaPlugin {
                                     player.getInventory().addItem(new ItemStack(TOOL_BLOCK));
                                 }
                                 else {
-                                    player.sendMessage("You do not have permission to run this command.");
+                                    message(player, "You do not have permission to run this command.");
                                 }
                             }
                             if (args[1].equalsIgnoreCase("on")) {
                                 if (player.hasPermission("safebuckets.tools.block.use")) {
                                     setToolStatus(toolblockPlayers, player.getName(), true);
-                                    player.sendMessage("Tool block enabled.");
+                                    message(player, "Tool block enabled.");
                                 }
                                 else {
-                                    player.sendMessage("You do not have permission to run this command.");
+                                    message(player, "You do not have permission to run this command.");
                                 }
                             }
                             if (args[1].equalsIgnoreCase("off")) {
                                 if (player.hasPermission("safebuckets.tools.block.use")) {
                                     setToolStatus(toolblockPlayers, player.getName(), false);
-                                    player.sendMessage("Tool block disabled.");
+                                    message(player, "Tool block disabled.");
                                 }
                                 else {
-                                    player.sendMessage("You do not have permission to run this command.");
+                                    message(player, "You do not have permission to run this command.");
                                 }
                             }
                         }
                         else {
-                            player.sendMessage("Too many arguments. Type \"/sb help\" for help.");
+                            message(player, "Too many arguments. Type \"/sb help\" for help.");
                         }
                     }
                     else {
-                        sender.sendMessage("You must be a player to run this command.");
+                        message(sender, "You must be a player to run this command.");
+                    }
+                    return true;
+                }
+                if (args[0].equalsIgnoreCase("flow")) {
+                    if (worldedit != null) {
+                        if (sender instanceof Player) {
+                            Player player = (Player) sender;
+                            if (player.hasPermission("safebuckets.region.flow")) {
+                                Selection sel = worldedit.getSelection(player);
+                                if (sel != null && sel instanceof CuboidSelection) {
+                                    if (sel.getArea() <= FLOW_MAX_VOLUME) {
+                                        message(player, setRegionSafe(sel.getMinimumPoint(), sel.getMaximumPoint(), false) + " blocks set unsafe.");
+                                    }
+                                    else {
+                                        message(player, "The selected area exceeds the maximum volume (" + FLOW_MAX_VOLUME + ").");
+                                    }
+                                }
+                                else {
+                                    message(player, "You must first make a cuboid selection.");
+                                }
+                            }
+                            else {
+                                message(player, "You do not have permission to run this command.");
+                            }
+                        }
+                        else {
+                            message(sender, "You must be a player to run this command.");
+                        }
+                    }
+                    else {
+                        message(sender, "The WorldEdit plugin could not be accessed!");
+                    }
+                    return true;
+                }
+                if (args[0].equalsIgnoreCase("static")) {
+                    if (worldedit != null) {
+                        if (sender instanceof Player) {
+                            Player player = (Player) sender;
+                            if (player.hasPermission("safebuckets.region.static")) {
+                                Selection sel = worldedit.getSelection(player);
+                                if (sel != null && sel instanceof CuboidSelection) {
+                                    if (sel.getArea() <= FLOW_MAX_VOLUME) {
+                                        message(player, setRegionSafe(sel.getMinimumPoint(), sel.getMaximumPoint(), true) + " fluid blocks affected.");
+                                    }
+                                    else {
+                                        message(player, "The selected area exceeds the maximum volume (" + FLOW_MAX_VOLUME + ").");
+                                    }
+                                }
+                                else {
+                                    message(player, "You must first make a cuboid selection.");
+                                }
+                            }
+                            else {
+                                message(player, "You do not have permission to run this command.");
+                            }
+                        }
+                        else {
+                            message(sender, "You must be a player to run this command.");
+                        }
+                    }
+                    else {
+                        message(sender, "The WorldEdit plugin could not be accessed!");
                     }
                     return true;
                 }
             }
-            sender.sendMessage("Unknown command. Type \"/sb help\" for help.");
+            message(sender, "Unknown command. Type \"/sb help\" for help.");
             return true;
         }
 
@@ -187,6 +259,12 @@ public class SafeBuckets extends JavaPlugin {
         PluginManager pm = this.getServer().getPluginManager();
         pm.registerEvents(l, this);
 
+        try {
+            worldedit = (WorldEditPlugin) getServer().getPluginManager().getPlugin("WorldEdit");
+        } catch (Exception e) {
+            log.log(Level.WARNING, "WorldEdit could not be loaded!");
+        }
+
         log.log(Level.INFO, "[" + getDescription().getName() + "] " + getDescription().getVersion() + " enabled.");
     }
 
@@ -203,6 +281,11 @@ public class SafeBuckets extends JavaPlugin {
         DISPENSER_SAFE = getConfig().getBoolean("dispenser.safe");
         DISPENSER_PLACE_SAFE = getConfig().getBoolean("dispenser.place-safe");
         DISPENSER_WHITELIST = getConfig().getBoolean("dispenser.whitelist");
+        FLOW_MAX_VOLUME = getConfig().getInt("flow.max-volume", 1000);
+    }
+
+    public void message(CommandSender sender, String msg) {
+        sender.sendMessage(ChatColor.AQUA + "SafeBuckets: " + msg);
     }
 
     public boolean isBlockSafe(Block block) {
@@ -214,29 +297,103 @@ public class SafeBuckets extends JavaPlugin {
         return false;
     }
 
-    public void setBlockSafe(Block block, boolean safe) {
+    public int setBlockSafe(Block block, boolean safe) {
         flag = true;
+        int changed = 0;
         if (safe) {
-            if (block.getType() == Material.WATER || block.getType() == Material.STATIONARY_WATER) {
-                block.setType(Material.STATIONARY_WATER);
-                block.setData((byte) 15);
-            }
-            if (block.getType() == Material.LAVA || block.getType() == Material.STATIONARY_LAVA) {
-                block.setType(Material.STATIONARY_LAVA);
-                block.setData((byte) 15);
+            if (block.getData() == 0) {
+                if (block.getType() == Material.WATER || block.getType() == Material.STATIONARY_WATER) {
+                    changed += removeChildFlows(block);
+                    block.setType(Material.STATIONARY_WATER);
+                    block.setData((byte) 15);
+                }
+                if (block.getType() == Material.LAVA || block.getType() == Material.STATIONARY_LAVA) {
+                    changed += removeChildFlows(block);
+                    block.setType(Material.STATIONARY_LAVA);
+                    block.setData((byte) 15);
+                }
             }
         }
         else {
             if (block.getType() == Material.STATIONARY_WATER && block.getData() == 15) {
+                changed++;
                 block.setType(Material.WATER);
                 block.setData((byte) 0);
             }
             if (block.getType() == Material.STATIONARY_LAVA && block.getData() == 15) {
+                changed++;
                 block.setType(Material.LAVA);
                 block.setData((byte) 0);
             }
         }
         flag = false;
+        return changed;
+    }
+
+    public int removeChildFlows(Block block) {
+        int count = 0;
+        BlockFace[] sides = new BlockFace[] { BlockFace.NORTH, BlockFace.SOUTH, BlockFace.WEST, BlockFace.EAST };
+        for (BlockFace b : sides) {
+            Block adj = block.getRelative(b);
+            if (adj.getType() == block.getType()) {
+                if (adj.getData() == block.getData() + 1 || block.getData() >= 8 && adj.getData() == 1) {
+                    count += removeChildFlows(adj);
+                    count++;
+                    adj.setType(Material.AIR);
+                    adj.setData((byte) 0);
+                }
+            }
+        }
+        Block below = block.getRelative(BlockFace.DOWN);
+        if (below.getType() == block.getType()) {
+            if (below.getData() == block.getData() + 8 || below.getData() == block.getData() - 1 || below.getData() == block.getData()) {
+                count += removeChildFlows(below);
+                count++;
+                below.setType(Material.AIR);
+                below.setData((byte) 0);
+            }
+        }
+        return count;
+    }
+
+    public Material getFlowingMaterial(Material m) {
+        if (m == Material.WATER || m == Material.STATIONARY_WATER) {
+            return Material.WATER;
+        }
+        if (m == Material.LAVA || m == Material.STATIONARY_LAVA) {
+            return Material.LAVA;
+        }
+        return null;
+    }
+
+    public Material getStationaryMaterial(Material m) {
+        if (m == Material.WATER || m == Material.STATIONARY_WATER) {
+            return Material.STATIONARY_WATER;
+        }
+        if (m == Material.LAVA || m == Material.STATIONARY_LAVA) {
+            return Material.STATIONARY_LAVA;
+        }
+        return null;
+    }
+
+    public int setRegionSafe(Location p1, Location p2, boolean safe) {
+        World world = p1.getWorld();
+        int count = 0;
+        int minX = Math.min(p1.getBlockX(), p2.getBlockX());
+        int minY = Math.min(p1.getBlockY(), p2.getBlockY());
+        int minZ = Math.min(p1.getBlockZ(), p2.getBlockZ());
+        int maxX = Math.max(p1.getBlockX(), p2.getBlockX());
+        int maxY = Math.max(p1.getBlockY(), p2.getBlockY());
+        int maxZ = Math.max(p1.getBlockZ(), p2.getBlockZ());
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    Block b = world.getBlockAt(x, y, z);
+                    count += setBlockSafe(b, safe);
+                }
+            }
+        }
+        return count;
     }
 
     public void queueSafeBlock(Block block) {

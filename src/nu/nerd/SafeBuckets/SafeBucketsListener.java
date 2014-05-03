@@ -230,7 +230,7 @@ public class SafeBucketsListener implements Listener {
 
         if (event.isBlockInHand() && event.getItem().getType() == plugin.TOOL_BLOCK && player.hasPermission("safebuckets.tools.block.use") && event.getAction() == Action.RIGHT_CLICK_BLOCK && plugin.canUseToolBlock(player)) {
             Block block = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().getBlock();
-            StringBuilder msg = new StringBuilder("SafeBuckets: ");
+            StringBuilder msg = new StringBuilder();
             String coords = new StringBuilder("(X=").append(block.getX()).append(", Y=").append(block.getY()).append(", Z=").append(block.getZ()).append(")").toString();
             if (block.isLiquid()) {
                 msg.append("Fluid at ").append(coords).append(" is ").append(plugin.isBlockSafe(block) ? "safe." : "unsafe.");
@@ -238,26 +238,32 @@ public class SafeBucketsListener implements Listener {
             else {
                 msg.append(block.getType().toString()).append(" at ").append(coords).append(" is not a fluid!");
             }
-            player.sendMessage(msg.toString());
+            plugin.message(player, msg.toString());
             event.setCancelled(true);
         }
         else if (event.isBlockInHand() && event.getItem().getType() == plugin.TOOL_BLOCK && player.hasPermission("safebuckets.tools.block.set") && event.getAction() == Action.LEFT_CLICK_BLOCK && plugin.canUseToolBlock(player)) {
             Block block = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().getBlock();
-            StringBuilder msg = new StringBuilder("SafeBuckets: ");
+            StringBuilder msg = new StringBuilder();
             String coords = new StringBuilder("(X=").append(block.getX()).append(", Y=").append(block.getY()).append(", Z=").append(block.getZ()).append(")").toString();
-            if (block.isLiquid()) {
-                msg.append(coords).append(" set ").append(plugin.isBlockSafe(block) ? "unsafe." : "safe.");
-                plugin.setBlockSafe(block, !plugin.isBlockSafe(block));
+            if (block.isLiquid() && (block.getData() == 0 || block.getData() == 15)) {
+                boolean safe = plugin.isBlockSafe(block);
+                msg.append(coords).append(" set ").append(safe ? "unsafe." : "safe. ");
+                if (!safe) {
+                    msg.append(plugin.setBlockSafe(block, true)).append(" child blocks affected.");
+                }
+                else {
+                    plugin.setBlockSafe(block, false);
+                }
             }
             else {
-                msg.append(block.getType().toString()).append(" at ").append(coords).append(" is not a fluid!");
+                msg.append(block.getType().toString()).append(" at ").append(coords).append(" is not a source fluid!");
             }
-            player.sendMessage(msg.toString());
+            plugin.message(player, msg.toString());
             event.setCancelled(true);
         }
         else if (event.hasItem() && event.getItem().getType() == plugin.TOOL_ITEM && player.hasPermission("safebuckets.tools.item.use") && event.getAction() == Action.RIGHT_CLICK_BLOCK && plugin.canUseTool(player)) {
             Block block = event.getClickedBlock();
-            StringBuilder msg = new StringBuilder("SafeBuckets: ");
+            StringBuilder msg = new StringBuilder();
             String coords = new StringBuilder("(X=").append(block.getX()).append(", Y=").append(block.getY()).append(", Z=").append(block.getZ()).append(")").toString();
             if (block.getType() == Material.DISPENSER) {
                 msg.append("Dispenser at ").append(coords).append(" is ").append(plugin.isRegistered(block) ? "registered." : "unregistered.");
@@ -265,12 +271,12 @@ public class SafeBucketsListener implements Listener {
             else {
                 msg.append(block.getType().toString()).append(" at ").append(coords).append(" is not a dispenser!");
             }
-            player.sendMessage(msg.toString());
+            plugin.message(player, msg.toString());
             event.setCancelled(true);
         }
         else if (event.hasItem() && event.getItem().getType() == plugin.TOOL_ITEM && player.hasPermission("safebuckets.tools.item.set") && event.getAction() == Action.LEFT_CLICK_BLOCK && plugin.canUseTool(player)) {
             Block block = event.getClickedBlock();
-            StringBuilder msg = new StringBuilder("SafeBuckets: ");
+            StringBuilder msg = new StringBuilder();
             String coords = new StringBuilder("(X=").append(block.getX()).append(", Y=").append(block.getY()).append(", Z=").append(block.getZ()).append(")").toString();
             if (block.getType() == Material.DISPENSER) {
                 msg.append("Dispenser at ").append(coords).append(plugin.isRegistered(block) ? " unregistered." : " registered.");
@@ -279,7 +285,7 @@ public class SafeBucketsListener implements Listener {
             else {
                 msg.append(block.getType().toString()).append(" at ").append(coords).append(" is not a dispenser!");
             }
-            player.sendMessage(msg.toString());
+            plugin.message(player, msg.toString());
             event.setCancelled(true);
         }
     }

@@ -39,6 +39,15 @@ permissions:
     description: Allows player to register or unregister a dispenser with the SafeBuckets item inspector tool
   safebuckets.tools.item.give:
     description: Allows player to give themself the SafeBuckets item inspector tool
+  safebuckets.region.*:
+    description: Gives access to SafeBuckets region commands
+    children:
+      safebuckets.region.flow: true
+      safebuckets.region.static: false
+  safebuckets.region.flow:
+    description: Allows use of SafeBuckets flow command
+  safebuckets.region.static:
+    description: Allows use of SafeBuckets static command
   safebuckets.reload:
     description: Allows use of SafeBuckets reload command
   safebuckets.debug:

@@ -42,12 +42,12 @@ permissions:
   safebuckets.region.*:
     description: Gives access to SafeBuckets region commands
     children:
-      safebuckets.region.flow: true
-      safebuckets.region.static: false
-  safebuckets.region.flow:
-    description: Allows use of SafeBuckets flow command
-  safebuckets.region.static:
-    description: Allows use of SafeBuckets static command
+      safebuckets.region.unsafe: true
+      safebuckets.region.safe: true
+  safebuckets.region.unsafe:
+    description: Allows use of SafeBuckets setunsafe command
+  safebuckets.region.safe:
+    description: Allows use of SafeBuckets setsafe command
   safebuckets.reload:
     description: Allows use of SafeBuckets reload command
   safebuckets.debug:
@@ -55,5 +55,4 @@ permissions:
 commands:
   sb:
     description: SafeBuckets commands
-    usage: |
-           /<command> help
+    usage: /<command> help

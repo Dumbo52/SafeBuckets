@@ -14,5 +14,7 @@ dispenser:
   safe: true
   place-safe: true
   whitelist: true
-flow:
+region:
   maximum-volume: 1000
+flow:
+  maximum-depth: -1

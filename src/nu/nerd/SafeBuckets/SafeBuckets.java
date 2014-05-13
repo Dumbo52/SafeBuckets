@@ -44,7 +44,9 @@ public class SafeBuckets extends JavaPlugin {
     public boolean DISPENSER_PLACE_SAFE;
     public boolean DISPENSER_WHITELIST;
 
-    public int FLOW_MAX_VOLUME;
+    public int REGION_MAX_VOLUME;
+
+    public int FLOW_MAX_DEPTH;
 
     private final SafeBucketsListener l = new SafeBucketsListener(this);
     private Set<String> toolPlayers = new HashSet<String>();
@@ -60,10 +62,15 @@ public class SafeBuckets extends JavaPlugin {
         if (command.getName().equalsIgnoreCase("sb") || command.getName().equalsIgnoreCase("safebuckets")) {
             if (args.length > 0) {
                 if (args[0].equalsIgnoreCase("reload")) {
-                    reloadConfig();
-                    loadConfig();
-                    message(sender, "Reloaded config.");
-                    log.info("SafeBuckets: Reloaded config.");
+                    if (sender.hasPermission("safebuckets.reload")) {
+                        reloadConfig();
+                        loadConfig();
+                        message(sender, "Reloaded config.");
+                        log.info("SafeBuckets: Reloaded config.");
+                    }
+                    else {
+                        message(sender, "You do not have permission to run this command.");
+                    }
                     return true;
                 }
                 if (args[0].equalsIgnoreCase("tool")) {
@@ -176,18 +183,18 @@ public class SafeBuckets extends JavaPlugin {
                     }
                     return true;
                 }
-                if (args[0].equalsIgnoreCase("flow")) {
+                if (args[0].equalsIgnoreCase("setunsafe") || args[0].equalsIgnoreCase("flow")) {
                     if (worldedit != null) {
                         if (sender instanceof Player) {
                             Player player = (Player) sender;
-                            if (player.hasPermission("safebuckets.region.flow")) {
+                            if (player.hasPermission("safebuckets.region.unsafe")) {
                                 Selection sel = worldedit.getSelection(player);
                                 if (sel != null && sel instanceof CuboidSelection) {
-                                    if (sel.getArea() <= FLOW_MAX_VOLUME) {
+                                    if (sel.getArea() <= REGION_MAX_VOLUME) {
                                         message(player, setRegionSafe(sel.getMinimumPoint(), sel.getMaximumPoint(), false) + " blocks set unsafe.");
                                     }
                                     else {
-                                        message(player, "The selected area exceeds the maximum volume (" + FLOW_MAX_VOLUME + ").");
+                                        message(player, "The selected area exceeds the maximum volume (" + REGION_MAX_VOLUME + ").");
                                     }
                                 }
                                 else {
@@ -207,18 +214,18 @@ public class SafeBuckets extends JavaPlugin {
                     }
                     return true;
                 }
-                if (args[0].equalsIgnoreCase("static")) {
+                if (args[0].equalsIgnoreCase("setsafe") || args[0].equalsIgnoreCase("static")) {
                     if (worldedit != null) {
                         if (sender instanceof Player) {
                             Player player = (Player) sender;
-                            if (player.hasPermission("safebuckets.region.static")) {
+                            if (player.hasPermission("safebuckets.region.safe")) {
                                 Selection sel = worldedit.getSelection(player);
                                 if (sel != null && sel instanceof CuboidSelection) {
-                                    if (sel.getArea() <= FLOW_MAX_VOLUME) {
+                                    if (sel.getArea() <= REGION_MAX_VOLUME || REGION_MAX_VOLUME < 0) {
                                         message(player, setRegionSafe(sel.getMinimumPoint(), sel.getMaximumPoint(), true) + " fluid blocks affected.");
                                     }
                                     else {
-                                        message(player, "The selected area exceeds the maximum volume (" + FLOW_MAX_VOLUME + ").");
+                                        message(player, "The selected area exceeds the maximum volume (" + REGION_MAX_VOLUME + ").");
                                     }
                                 }
                                 else {
@@ -236,6 +243,24 @@ public class SafeBuckets extends JavaPlugin {
                     else {
                         message(sender, "The WorldEdit plugin could not be accessed!");
                     }
+                    return true;
+                }
+                if (args[0].equalsIgnoreCase("help")) {
+                    sender.sendMessage("SafeBuckets Commands:");
+                    sender.sendMessage("/sb reload");
+                    sender.sendMessage(ChatColor.GRAY + "    Reloads SafeBuckets configuration.");
+                    sender.sendMessage("/sb tool [on|off|give]");
+                    sender.sendMessage(ChatColor.GRAY + "    Toggles, turns on, turns off, or gives you the SafeBuckets");
+                    sender.sendMessage(ChatColor.GRAY + "    dispenser inspector tool.");
+                    sender.sendMessage("/sb toolblock [on|off|give]");
+                    sender.sendMessage(ChatColor.GRAY + "    Toggles, turns on, turns off, or gives you the SafeBuckets");
+                    sender.sendMessage(ChatColor.GRAY + "    fluid inspector tool.");
+                    sender.sendMessage("/sb setunsafe, /sb flow");
+                    sender.sendMessage(ChatColor.GRAY + "    Sets unsafe all safe sources within the WorldEdit selection.");
+                    sender.sendMessage("/sb setsafe, /sb static");
+                    sender.sendMessage(ChatColor.GRAY + "    Sets safe all unsafe sources within the WorldEdit selection.");
+                    sender.sendMessage("/sb help");
+                    sender.sendMessage(ChatColor.GRAY + "    Displays this help message.");
                     return true;
                 }
             }
@@ -281,7 +306,8 @@ public class SafeBuckets extends JavaPlugin {
         DISPENSER_SAFE = getConfig().getBoolean("dispenser.safe");
         DISPENSER_PLACE_SAFE = getConfig().getBoolean("dispenser.place-safe");
         DISPENSER_WHITELIST = getConfig().getBoolean("dispenser.whitelist");
-        FLOW_MAX_VOLUME = getConfig().getInt("flow.max-volume", 1000);
+        REGION_MAX_VOLUME = getConfig().getInt("region.maximum-volume", 1000);
+        FLOW_MAX_DEPTH = getConfig().getInt("flow.maximum-depth", 20);
     }
 
     public void message(CommandSender sender, String msg) {
@@ -303,12 +329,12 @@ public class SafeBuckets extends JavaPlugin {
         if (safe) {
             if (block.getData() == 0) {
                 if (block.getType() == Material.WATER || block.getType() == Material.STATIONARY_WATER) {
-                    changed += removeChildFlows(block);
+                    changed += removeChildFlows(block, 0);
                     block.setType(Material.STATIONARY_WATER);
                     block.setData((byte) 15);
                 }
                 if (block.getType() == Material.LAVA || block.getType() == Material.STATIONARY_LAVA) {
-                    changed += removeChildFlows(block);
+                    changed += removeChildFlows(block, 0);
                     block.setType(Material.STATIONARY_LAVA);
                     block.setData((byte) 15);
                 }
@@ -330,14 +356,17 @@ public class SafeBuckets extends JavaPlugin {
         return changed;
     }
 
-    public int removeChildFlows(Block block) {
+    public int removeChildFlows(Block block, int depth) {
+        if (depth == FLOW_MAX_DEPTH) {
+            return 0;
+        }
         int count = 0;
         BlockFace[] sides = new BlockFace[] { BlockFace.NORTH, BlockFace.SOUTH, BlockFace.WEST, BlockFace.EAST };
         for (BlockFace b : sides) {
             Block adj = block.getRelative(b);
             if (adj.getType() == block.getType()) {
                 if (adj.getData() == block.getData() + 1 || block.getData() >= 8 && adj.getData() == 1) {
-                    count += removeChildFlows(adj);
+                    count += removeChildFlows(adj, depth + 1);
                     count++;
                     adj.setType(Material.AIR);
                     adj.setData((byte) 0);
@@ -347,7 +376,7 @@ public class SafeBuckets extends JavaPlugin {
         Block below = block.getRelative(BlockFace.DOWN);
         if (below.getType() == block.getType()) {
             if (below.getData() == block.getData() + 8 || below.getData() == block.getData() - 1 || below.getData() == block.getData()) {
-                count += removeChildFlows(below);
+                count += removeChildFlows(below, depth + 1);
                 count++;
                 below.setType(Material.AIR);
                 below.setData((byte) 0);

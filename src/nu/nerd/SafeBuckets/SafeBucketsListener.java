@@ -48,20 +48,16 @@ public class SafeBucketsListener implements Listener {
             Block block = event.getBlock();
             if (block.isLiquid()) {
                 if (plugin.isBlockSafe(block)) {
-                    if (event.getChangedType().compareTo(Material.WATER) < 0 || event.getChangedType().compareTo(Material.STATIONARY_LAVA) > 0) {
+                    if (plugin.getStationaryMaterial(event.getChangedType()) != Material.STATIONARY_WATER && plugin.getStationaryMaterial(event.getChangedType()) != Material.STATIONARY_LAVA) {
                         event.setCancelled(true);
                     }
-                    else if (block.getType().compareTo(event.getChangedType()) == 1) {
-                        Block above = block.getRelative(BlockFace.UP);
-                        if (!(above.getType() == event.getChangedType() && above.getData() % 8 == 7)) {
-                            plugin.setBlockSafe(block, false);
-                            event.setCancelled(true);
-                        }
+                    else if (plugin.getFlowingMaterial(block.getType()) == event.getChangedType()) {
+                        event.setCancelled(true);
                     }
                     else if (block.getType() == event.getChangedType()) {
                         Block[] adj = new Block[] { block.getRelative(BlockFace.NORTH), block.getRelative(BlockFace.SOUTH), block.getRelative(BlockFace.WEST), block.getRelative(BlockFace.EAST) };
                         for (Block b : adj) {
-                            if (b.getType().compareTo(block.getType()) == -1 && b.getData() == block.getData() || b.getType() == block.getType() && b.getData() == 0) {
+                            if (b.getType() == plugin.getFlowingMaterial(block.getType()) && b.getData() == block.getData() || b.getType() == block.getType() && b.getData() == 0) {
                                 plugin.setBlockSafe(b, true);
                             }
                         }
@@ -69,12 +65,24 @@ public class SafeBucketsListener implements Listener {
                     }
                 }
                 else if (block.getData() == 15) {
-                    if (event.getChangedType().compareTo(block.getType()) == 1) {
+                    if (event.getChangedType() == plugin.getStationaryMaterial(block.getType())) {
                         plugin.setBlockSafe(block, true);
                         event.setCancelled(true);
                     }
                     else if (event.getChangedType() == block.getType()) {
                         block.setData((byte) 14);
+                    }
+                }
+                else if (block.getData() == 7 && event.getChangedType() == plugin.getFlowingMaterial(block.getType())) {
+                    Block below = block.getRelative(BlockFace.DOWN);
+                    if (below.getType() == block.getType() && below.getData() == 15) {
+                        Block[] adj = new Block[] { block.getRelative(BlockFace.NORTH), block.getRelative(BlockFace.SOUTH), block.getRelative(BlockFace.WEST), block.getRelative(BlockFace.EAST) };
+                        for (Block b : adj) {
+                            if (b.getData() == 6 && b.getType() == block.getType()) {
+                                return;
+                            }
+                        }
+                        below.setData((byte) 7);
                     }
                 }
             }
@@ -166,11 +174,6 @@ public class SafeBucketsListener implements Listener {
                 if (plugin.isBlockSafe(event.getToBlock())) {
                     plugin.setBlockSafe(event.getToBlock(), false);
                     event.setCancelled(true);
-                }
-                if (block.getData() == 15) {
-                    if (event.getToBlock().getType() == block.getType() && event.getToBlock().getData() != 15) {
-                        block.setData((byte) 14);
-                    }
                 }
             }
         }

@@ -11,6 +11,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
@@ -318,7 +319,7 @@ public class SafeBuckets extends JavaPlugin {
         // Using block data values works better for fluids because this method
         // doesn't use any additional data.
         if (block.getType() == Material.STATIONARY_WATER || block.getType() == Material.STATIONARY_LAVA) {
-            return block.getData() == 15;
+            return block.getData() == 15 && !hasEdgeCap(block);
         }
         return false;
     }
@@ -362,10 +363,11 @@ public class SafeBuckets extends JavaPlugin {
         }
         int count = 0;
         BlockFace[] sides = new BlockFace[] { BlockFace.NORTH, BlockFace.SOUTH, BlockFace.WEST, BlockFace.EAST };
+        int factor = block.getWorld().getEnvironment() != Environment.NETHER && getStationaryMaterial(block.getType()) == Material.STATIONARY_LAVA ? 2 : 1;
         for (BlockFace b : sides) {
             Block adj = block.getRelative(b);
-            if (adj.getType() == block.getType()) {
-                if (adj.getData() == block.getData() + 1 || block.getData() >= 8 && adj.getData() == 1) {
+            if (getStationaryMaterial(adj.getType()) == getStationaryMaterial(block.getType())) {
+                if (adj.getData() == block.getData() + factor || block.getData() >= 8 && adj.getData() == factor) {
                     count += removeChildFlows(adj, depth + 1);
                     count++;
                     adj.setType(Material.AIR);
@@ -374,8 +376,8 @@ public class SafeBuckets extends JavaPlugin {
             }
         }
         Block below = block.getRelative(BlockFace.DOWN);
-        if (below.getType() == block.getType()) {
-            if (below.getData() == block.getData() + 8 || below.getData() == block.getData() - 1 || below.getData() == block.getData()) {
+        if (getStationaryMaterial(below.getType()) == getStationaryMaterial(block.getType())) {
+            if (below.getData() == block.getData() + 8 || below.getData() == block.getData()) {
                 count += removeChildFlows(below, depth + 1);
                 count++;
                 below.setType(Material.AIR);
@@ -403,6 +405,19 @@ public class SafeBuckets extends JavaPlugin {
             return Material.STATIONARY_LAVA;
         }
         return null;
+    }
+    
+    public boolean hasEdgeCap(Block block) {
+        Block above = block.getRelative(BlockFace.UP);
+        if (getStationaryMaterial(above.getType()) == getStationaryMaterial(block.getType())) {
+            if (above.getData() == block.getData()) {
+                return hasEdgeCap(above);
+            }
+            else if (above.getData() + 8 == block.getData()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public int setRegionSafe(Location p1, Location p2, boolean safe) {

@@ -13,7 +13,6 @@ dispenser:
   enabled: true
   safe: true
   place-safe: true
-  whitelist: true
 region:
   maximum-volume: 1000
 flow:

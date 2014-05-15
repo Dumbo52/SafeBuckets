@@ -2,10 +2,11 @@ package nu.nerd.SafeBuckets;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import net.minecraft.server.v1_7_R1.TileEntityDispenser;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -14,12 +15,13 @@ import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.Dispenser;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.craftbukkit.v1_7_R1.block.CraftDispenser;
+import org.bukkit.craftbukkit.v1_7_R1.inventory.CraftInventory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -43,13 +45,13 @@ public class SafeBuckets extends JavaPlugin {
     public boolean DISPENSER_ENABLED;
     public boolean DISPENSER_SAFE;
     public boolean DISPENSER_PLACE_SAFE;
-    public boolean DISPENSER_WHITELIST;
 
     public int REGION_MAX_VOLUME;
 
     public int FLOW_MAX_DEPTH;
 
     private final SafeBucketsListener l = new SafeBucketsListener(this);
+    private final String registeredCode = ChatColor.STRIKETHROUGH.toString() + ChatColor.RESET.toString();
     private Set<String> toolPlayers = new HashSet<String>();
     private Set<String> toolblockPlayers = new HashSet<String>();
     private WorldEditPlugin worldedit;
@@ -306,7 +308,6 @@ public class SafeBuckets extends JavaPlugin {
         DISPENSER_ENABLED = getConfig().getBoolean("dispenser.enabled");
         DISPENSER_SAFE = getConfig().getBoolean("dispenser.safe");
         DISPENSER_PLACE_SAFE = getConfig().getBoolean("dispenser.place-safe");
-        DISPENSER_WHITELIST = getConfig().getBoolean("dispenser.whitelist");
         REGION_MAX_VOLUME = getConfig().getInt("region.maximum-volume", 1000);
         FLOW_MAX_DEPTH = getConfig().getInt("flow.maximum-depth", 20);
     }
@@ -444,21 +445,27 @@ public class SafeBuckets extends JavaPlugin {
         blockCache.put(block.getLocation(), block.getWorld().getTime());
     }
 
-    public void registerBlock(Block block, boolean safe) {
-        block.setMetadata("reg", new FixedMetadataValue(this, safe));
+    public void registerBlock(Block block, boolean reg) {
+        TileEntityDispenser d = (TileEntityDispenser) ((CraftInventory) ((CraftDispenser) (Dispenser) block.getState()).getInventory()).getInventory();
+        if (isRegistered(d)) {
+            if (!reg) {
+                d.a(d.getInventoryName().substring(registeredCode.length()));
+            }
+        }
+        else if (reg) {
+            d.a(registeredCode + d.getInventoryName());
+        }
     }
 
     public boolean isRegistered(Block block) {
         if (block.getType() == Material.DISPENSER) {
-            if (block.hasMetadata("reg")) {
-                List<MetadataValue> meta = block.getMetadata("reg");
-                return meta.size() > 0 && meta.get(0).asBoolean();
-            }
-            else {
-                return !DISPENSER_WHITELIST;
-            }
+            return isRegistered((TileEntityDispenser) ((CraftInventory) ((CraftDispenser) (Dispenser) block.getState()).getInventory()).getInventory());
         }
         return false;
+    }
+    
+    public boolean isRegistered(TileEntityDispenser d) {
+        return d.getInventoryName().startsWith(registeredCode);
     }
 
     public void setToolStatus(Set<String> pList, String player, boolean status) {

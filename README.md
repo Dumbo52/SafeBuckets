@@ -84,10 +84,6 @@ Unregistered dispensers will dispense safe fluids.
 
 Dispensers are initially unregistered when placed.
 
-**dispenser.whitelist** (boolean)
-
-Already existing dispensers act as unregistered dispensers.
-
 **region.maximum-volume** (integer)
 
 The maximum volume of a WorldEdit selection when setting the selection safe or unsafe. Set to -1 for no limit.

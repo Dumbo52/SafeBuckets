@@ -6,6 +6,11 @@ that player-placed water and lava never flow. Doesn't catch blocks placed with
 actual fluid blocks, so people with access to place them can still add normal
 water.
 
+Migrating
+---------
+
+After having run the server with SafeBuckets v0.6, restart the server running SafeBuckets v1.0c (SafeBucketsConverter). When the plugin is loaded, it will migrate all sources to the new format and run as SafeBuckets v1.0. Make sure that you see, "[SafeBuckets] # sources migrated." in the console when the plugin is enabled. When the server is next restarted, load SafeBuckets v1.0. The database at /plugins/SafeBuckets/SafeBuckets.db is then free to be deleted, since the new version of SafeBuckets uses block data to store information instead of a database.
+
 Commands and Usage
 ------------------
 

@@ -1,10 +1,14 @@
 package nu.nerd.SafeBuckets;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javax.persistence.PersistenceException;
 
 import me.botsko.prism.Prism;
 import me.botsko.prism.actionlibs.ActionType;
@@ -13,6 +17,7 @@ import net.minecraft.server.v1_7_R3.MathHelper;
 import net.minecraft.server.v1_7_R3.MovingObjectPosition;
 import net.minecraft.server.v1_7_R3.TileEntityDispenser;
 import net.minecraft.server.v1_7_R3.Vec3D;
+import nu.nerd.SafeBuckets.database.SafeLiquid;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -298,6 +303,7 @@ public class SafeBuckets extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         loadConfig();
+        migrateSources();
 
         PluginManager pm = this.getServer().getPluginManager();
         pm.registerEvents(l, this);
@@ -354,6 +360,25 @@ public class SafeBuckets extends JavaPlugin {
         LOG_MANUAL_FLOW = getConfig().getBoolean("logging.manual-flow");
         LOG_REGION_FLOW = getConfig().getBoolean("logging.region-flow");
         LOG_NATURAL_FLOW = getConfig().getBoolean("logging.natural-flow");
+    }
+    
+    public void migrateSources() {
+        try {
+            getDatabase().find(SafeLiquid.class).findRowCount();
+            List<SafeLiquid> liquids = getDatabase().find(SafeLiquid.class).findList();
+            log.log(Level.INFO, "[SafeBuckets] Migrating sources from " + liquids.size() + " entries...");
+            int c = 0;
+            for (SafeLiquid l : liquids) {
+                Block b = getServer().getWorld(l.getWorld()).getBlockAt(l.getX(), l.getY(), l.getZ());
+                if ((b.getType() == Material.STATIONARY_WATER || b.getType() == Material.STATIONARY_LAVA) && b.getData() == 0) {
+                    setBlockSafe(b, true, false);
+                    c++;
+                }
+            }
+            log.log(Level.INFO, "[SafeBuckets] " + c + " sources migrated.");
+        } catch (PersistenceException ex) {
+            log.log(Level.INFO, "[SafeBuckets] No database found; use SafeBuckets v1.0 instead of v1.0c (SafeBucketsConverter).");
+        }
     }
 
     public void message(CommandSender sender, String msg) {
@@ -755,6 +780,13 @@ public class SafeBuckets extends JavaPlugin {
 
     public boolean canUseToolBlock(Player player) {
         return toolblockPlayers.contains(player.getName()) != TOOL_DEFAULT_ON;
+    }
+    
+    @Override
+    public ArrayList<Class<?>> getDatabaseClasses() {
+        ArrayList<Class<?>> list = new ArrayList<Class<?>>();
+        list.add(SafeLiquid.class);
+        return list;
     }
 
 }

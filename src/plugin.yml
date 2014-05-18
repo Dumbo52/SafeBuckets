@@ -3,7 +3,7 @@ main: nu.nerd.SafeBuckets.SafeBuckets
 version: ${project.version}
 description: ${project.description}
 website: ${project.url}
-database: false
+database: true
 softdepend: [WorldEdit, LogBlock, Prism]
 authors: [Travis Watkins, Ed Kellett, Stephen McGregor]
 permissions:

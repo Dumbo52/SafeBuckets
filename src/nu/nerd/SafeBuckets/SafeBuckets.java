@@ -288,7 +288,7 @@ public class SafeBuckets extends JavaPlugin {
         pm.registerEvents(l, this);
 
         try {
-            worldedit = (WorldEditPlugin) getServer().getPluginManager().getPlugin("WorldEdit");
+            worldedit = (WorldEditPlugin) pm.getPlugin("WorldEdit");
         } catch (Exception e) {
             log.log(Level.WARNING, "WorldEdit could not be loaded!");
         }

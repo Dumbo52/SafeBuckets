@@ -86,8 +86,20 @@ Dispensers are initially unregistered when placed.
 
 **region.maximum-volume** (integer)
 
-The maximum volume of a WorldEdit selection when setting the selection safe or unsafe. Set to -1 for no limit.
+The maximum volume of a WorldEdit selection when setting the selection safe or unsafe. Set to -1 for no limit. (Requires WorldEdit)
 
 **flow.maximum-depth** (integer)
 
 The maximum recursion depth for removing child flows when setting fluids safe. Set to -1 for no limit.
+
+**logging.manual-flow** (boolean)
+
+Log modification of fluids with the fluid inspector tool block. (Requires LogBlock)
+
+**logging.region-flow** (boolean)
+
+Log modification of fluids with the region flow commands. (Requires LogBlock, WorldEdit)
+
+**logging.natural-flow** (boolean)
+
+Log modification of safe sources due to flowing liquids. (Requires LogBlock)

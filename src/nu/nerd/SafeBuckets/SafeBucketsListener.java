@@ -58,7 +58,7 @@ public class SafeBucketsListener implements Listener {
                         Block[] adj = new Block[] { block.getRelative(BlockFace.NORTH), block.getRelative(BlockFace.SOUTH), block.getRelative(BlockFace.WEST), block.getRelative(BlockFace.EAST) };
                         for (Block b : adj) {
                             if (b.getType() == plugin.getFlowingMaterial(block.getType()) && b.getData() == block.getData() || b.getType() == block.getType() && b.getData() == 0) {
-                                plugin.setBlockSafe(b, true);
+                                plugin.setBlockSafe(b, true, plugin.LOG_NATURAL_FLOW, null);
                             }
                         }
                         event.setCancelled(true);
@@ -66,7 +66,7 @@ public class SafeBucketsListener implements Listener {
                 }
                 else if (block.getData() == 15) {
                     if (event.getChangedType() == plugin.getStationaryMaterial(block.getType())) {
-                        plugin.setBlockSafe(block, true);
+                        plugin.setBlockSafe(block, true, plugin.LOG_NATURAL_FLOW, null);
                         event.setCancelled(true);
                     }
                     else if (event.getChangedType() == block.getType()) {
@@ -157,7 +157,7 @@ public class SafeBucketsListener implements Listener {
                 // This difference should always be 5 for water and 30 for lava
                 // (10 in Nether).
                 if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 40) {
-                    plugin.setBlockSafe(block, true);
+                    plugin.setBlockSafe(block, true, plugin.LOG_NATURAL_FLOW, null);
                     event.setCancelled(true);
                 }
             }
@@ -172,7 +172,7 @@ public class SafeBucketsListener implements Listener {
             }
             else {
                 if (plugin.isBlockSafe(event.getToBlock())) {
-                    plugin.setBlockSafe(event.getToBlock(), false);
+                    plugin.setBlockSafe(event.getToBlock(), false, plugin.LOG_NATURAL_FLOW, null);
                     event.setCancelled(true);
                 }
             }
@@ -252,10 +252,10 @@ public class SafeBucketsListener implements Listener {
                 boolean safe = plugin.isBlockSafe(block);
                 msg.append(coords).append(" set ").append(safe ? "unsafe." : "safe. ");
                 if (!safe) {
-                    msg.append(plugin.setBlockSafe(block, true)).append(" child blocks affected.");
+                    msg.append(plugin.setBlockSafe(block, true, plugin.LOG_MANUAL_FLOW, player)).append(" child blocks affected.");
                 }
                 else {
-                    plugin.setBlockSafe(block, false);
+                    plugin.setBlockSafe(block, false, plugin.LOG_MANUAL_FLOW, player);
                 }
             }
             else {

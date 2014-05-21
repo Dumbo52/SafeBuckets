@@ -32,6 +32,11 @@
 			<artifactId>worldedit</artifactId>
 			<version>5.6.1</version>
 		</dependency>
+		<dependency>
+			<groupId>de.diddiz</groupId>
+			<artifactId>logblock</artifactId>
+			<version>dev-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 	<repositories>
             <repository>

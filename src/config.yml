@@ -17,3 +17,7 @@ region:
   maximum-volume: 1000
 flow:
   maximum-depth: -1
+logging:
+  manual-flow: true
+  region-flow: true
+  natural-flow: false

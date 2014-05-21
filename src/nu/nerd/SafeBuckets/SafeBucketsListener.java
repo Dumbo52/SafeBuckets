@@ -100,7 +100,7 @@ public class SafeBucketsListener implements Listener {
             if (mat == Material.LAVA_BUCKET || mat == Material.WATER_BUCKET) {
                 if (plugin.DISPENSER_ENABLED) {
                     if (plugin.DISPENSER_SAFE && !plugin.isRegistered(blockDispenser)) {
-                        plugin.queueSafeBlock(blockDispense);
+                        plugin.queueSafeBlock(blockDispense, false, null);
                     }
                     StringBuilder message = new StringBuilder("SafeBuckets: Dispensing (").append(event.getBlock().getX()).append(",").append(event.getBlock().getY()).append(",").append(event.getBlock().getZ()).append(") ");
                     if (plugin.isRegistered(blockDispenser)) {
@@ -154,10 +154,11 @@ public class SafeBucketsListener implements Listener {
         Block block = event.getBlock();
         if (plugin.blockCache.containsKey(block.getLocation())) {
             if (plugin.BUCKET_PLACE_SAFE) {
+                SafeEntry entry = plugin.blockCache.get(block.getLocation());
                 // This difference should always be 5 for water and 30 for lava
                 // (10 in Nether).
-                if (block.getWorld().getTime() - plugin.blockCache.get(block.getLocation()) <= 40) {
-                    plugin.setBlockSafe(block, true, plugin.LOG_NATURAL_FLOW, null);
+                if (block.getWorld().getTime() - entry.getTime() <= 40) {
+                    plugin.setBlockSafe(block, true, plugin.LOG_MANUAL_FLOW, entry.getPlayer());
                     event.setCancelled(true);
                 }
             }
@@ -183,7 +184,7 @@ public class SafeBucketsListener implements Listener {
     public void onBlockFade(BlockFadeEvent event) {
         if (plugin.BUCKET_PLACE_SAFE) {
             if (event.getBlock().getType() == Material.ICE) {
-                plugin.queueSafeBlock(event.getBlock());
+                plugin.queueSafeBlock(event.getBlock(), plugin.LOG_NATURAL_FLOW, null); // TODO: Log this better.
             }
         }
     }
@@ -197,7 +198,7 @@ public class SafeBucketsListener implements Listener {
                     // If we are breaking the block with an enchanted pick then
                     // don't replace it with air, we want it to drop as an item
                     // event.getBlock().setTypeId(0);
-                    plugin.queueSafeBlock(block);
+                    plugin.queueSafeBlock(block, plugin.LOG_MANUAL_FLOW, event.getPlayer()); // TODO: Log this better.
                 }
             }
         }
@@ -219,7 +220,7 @@ public class SafeBucketsListener implements Listener {
 
         if (plugin.BUCKET_ENABLED) {
             if (plugin.BUCKET_PLACE_SAFE) {
-                plugin.queueSafeBlock(block);
+                plugin.queueSafeBlock(block, plugin.LOG_MANUAL_FLOW, event.getPlayer());
             }
         }
         else {

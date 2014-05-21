@@ -65,7 +65,7 @@ public class SafeBuckets extends JavaPlugin {
     private Consumer lbConsumer;
 
     public static final Logger log = Logger.getLogger("Minecraft");
-    public HashMap<Location, Long> blockCache = new HashMap<Location, Long>();
+    public HashMap<Location, SafeEntry> blockCache = new HashMap<Location, SafeEntry>();
     public boolean flag = false;
 
     @Override
@@ -479,8 +479,8 @@ public class SafeBuckets extends JavaPlugin {
         return count;
     }
 
-    public void queueSafeBlock(Block block) {
-        blockCache.put(block.getLocation(), block.getWorld().getTime());
+    public void queueSafeBlock(Block block, boolean log, Player p) {
+        blockCache.put(block.getLocation(), new SafeEntry(block.getWorld().getTime(), log ? p : null));
     }
 
     public void registerBlock(Block block, boolean reg) {

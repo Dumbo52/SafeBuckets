@@ -344,16 +344,9 @@ public class SafeBuckets extends JavaPlugin {
         return false;
     }
 
-    public int setBlockSafe(Block block, boolean safe, boolean log, Player p) {
+    public int setBlockSafe(Block block, boolean safe, boolean log, String pName) {
         flag = true;
         int changed = 0;
-        String pName;
-        if (p == null) {
-            pName = getFlowingMaterial(block.getType()) == Material.WATER ? "WaterFlow" : "LavaFlow";
-        }
-        else {
-            pName = p.getName();
-        }
         if (safe) {
             if (block.getData() == 0) {
                 if (block.getType() == Material.WATER || block.getType() == Material.STATIONARY_WATER) {
@@ -395,6 +388,10 @@ public class SafeBuckets extends JavaPlugin {
         flag = false;
         return changed;
     }
+    
+    public Consumer getConsumer() {
+        return lbConsumer;
+    }
 
     public int removeChildFlows(Block block, int depth) {
         if (depth == FLOW_MAX_DEPTH) {
@@ -427,20 +424,20 @@ public class SafeBuckets extends JavaPlugin {
     }
 
     public Material getFlowingMaterial(Material m) {
-        if (m == Material.WATER || m == Material.STATIONARY_WATER) {
+        if (m == Material.WATER || m == Material.STATIONARY_WATER || m == Material.WATER_BUCKET) {
             return Material.WATER;
         }
-        if (m == Material.LAVA || m == Material.STATIONARY_LAVA) {
+        if (m == Material.LAVA || m == Material.STATIONARY_LAVA || m == Material.LAVA_BUCKET) {
             return Material.LAVA;
         }
         return null;
     }
 
     public Material getStationaryMaterial(Material m) {
-        if (m == Material.WATER || m == Material.STATIONARY_WATER) {
+        if (m == Material.WATER || m == Material.STATIONARY_WATER || m == Material.WATER_BUCKET) {
             return Material.STATIONARY_WATER;
         }
-        if (m == Material.LAVA || m == Material.STATIONARY_LAVA) {
+        if (m == Material.LAVA || m == Material.STATIONARY_LAVA || m == Material.LAVA_BUCKET) {
             return Material.STATIONARY_LAVA;
         }
         return null;
@@ -472,26 +469,27 @@ public class SafeBuckets extends JavaPlugin {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
                     Block b = world.getBlockAt(x, y, z);
-                    count += setBlockSafe(b, safe, LOG_REGION_FLOW, issuer);
+                    count += setBlockSafe(b, safe, LOG_REGION_FLOW, issuer.getName());
                 }
             }
         }
         return count;
     }
 
-    public void queueSafeBlock(Block block, boolean log, Player p) {
-        blockCache.put(block.getLocation(), new SafeEntry(block.getWorld().getTime(), log ? p : null));
+    public void queueSafeBlock(Block block, boolean log, String pName) {
+        blockCache.put(block.getLocation(), new SafeEntry(block.getWorld().getTime(), log, pName));
     }
 
     public void registerBlock(Block block, boolean reg) {
         TileEntityDispenser d = (TileEntityDispenser) ((CraftInventory) ((CraftDispenser) (Dispenser) block.getState()).getInventory()).getInventory();
+        boolean isNamed = d != null && !d.getInventoryName().endsWith("container.dispenser");
         if (isRegistered(d)) {
             if (!reg) {
-                d.a(d.getInventoryName().substring(registeredCode.length()));
+                d.a(isNamed ? d.getInventoryName().substring(registeredCode.length()) : null);
             }
         }
         else if (reg) {
-            d.a(registeredCode + d.getInventoryName());
+            d.a(registeredCode + (isNamed ? d.getInventoryName() : "Dispenser"));
         }
     }
 

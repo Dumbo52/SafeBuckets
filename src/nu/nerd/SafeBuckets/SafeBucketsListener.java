@@ -58,7 +58,7 @@ public class SafeBucketsListener implements Listener {
                         Block[] adj = new Block[] { block.getRelative(BlockFace.NORTH), block.getRelative(BlockFace.SOUTH), block.getRelative(BlockFace.WEST), block.getRelative(BlockFace.EAST) };
                         for (Block b : adj) {
                             if (b.getType() == plugin.getFlowingMaterial(block.getType()) && b.getData() == block.getData() || b.getType() == block.getType() && b.getData() == 0) {
-                                plugin.setBlockSafe(b, true, plugin.LOG_NATURAL_FLOW, null);
+                                plugin.setBlockSafe(b, true, plugin.LOG_NATURAL_FLOW, b.getType() == Material.STATIONARY_WATER ? "WaterFlow" : "LavaFlow");
                             }
                         }
                         event.setCancelled(true);
@@ -66,7 +66,7 @@ public class SafeBucketsListener implements Listener {
                 }
                 else if (block.getData() == 15) {
                     if (event.getChangedType() == plugin.getStationaryMaterial(block.getType())) {
-                        plugin.setBlockSafe(block, true, plugin.LOG_NATURAL_FLOW, null);
+                        plugin.setBlockSafe(block, true, plugin.LOG_NATURAL_FLOW, block.getType() == Material.WATER ? "WaterFlow" : "LavaFlow");
                         event.setCancelled(true);
                     }
                     else if (event.getChangedType() == block.getType()) {
@@ -158,7 +158,7 @@ public class SafeBucketsListener implements Listener {
                 // This difference should always be 5 for water and 30 for lava
                 // (10 in Nether).
                 if (block.getWorld().getTime() - entry.getTime() <= 40) {
-                    plugin.setBlockSafe(block, true, plugin.LOG_MANUAL_FLOW, entry.getPlayer());
+                    plugin.setBlockSafe(block, true, entry.isLogged(), entry.getPlayer());
                     event.setCancelled(true);
                 }
             }
@@ -173,7 +173,7 @@ public class SafeBucketsListener implements Listener {
             }
             else {
                 if (plugin.isBlockSafe(event.getToBlock())) {
-                    plugin.setBlockSafe(event.getToBlock(), false, plugin.LOG_NATURAL_FLOW, null);
+                    plugin.setBlockSafe(event.getToBlock(), false, plugin.LOG_NATURAL_FLOW, event.getToBlock().getType() == Material.STATIONARY_WATER ? "WaterFlow" : "LavaFlow");
                     event.setCancelled(true);
                 }
             }
@@ -183,8 +183,15 @@ public class SafeBucketsListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockFade(BlockFadeEvent event) {
         if (plugin.BUCKET_PLACE_SAFE) {
-            if (event.getBlock().getType() == Material.ICE) {
-                plugin.queueSafeBlock(event.getBlock(), plugin.LOG_NATURAL_FLOW, null); // TODO: Log this better.
+            Block b = event.getBlock();
+            if (b.getType() == Material.ICE) {
+                // In order to catch this properly, we'll need to cancel the event and push it along a little.
+                if (plugin.LOG_NATURAL_FLOW) {
+                    plugin.getConsumer().queueBlockReplace("SnowFade", b.getState(), 9, (byte) 15);
+                }
+                b.setType(Material.STATIONARY_WATER);
+                b.setData((byte) 15);
+                event.setCancelled(true);
             }
         }
     }
@@ -198,34 +205,32 @@ public class SafeBucketsListener implements Listener {
                     // If we are breaking the block with an enchanted pick then
                     // don't replace it with air, we want it to drop as an item
                     // event.getBlock().setTypeId(0);
-                    plugin.queueSafeBlock(block, plugin.LOG_MANUAL_FLOW, event.getPlayer()); // TODO: Log this better.
+                    plugin.queueSafeBlock(block, plugin.LOG_MANUAL_FLOW, event.getPlayer().getName());
                 }
             }
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBlockPlace(BlockPlaceEvent event) {
-        Block block = event.getBlockPlaced();
-        if (plugin.DISPENSER_PLACE_SAFE) {
-            if (block.getType() == Material.DISPENSER) {
-                plugin.registerBlock(block, false);
-            }
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerBucketEmpty(PlayerBucketEmptyEvent event) {
         Block block = event.getBlockClicked().getRelative(event.getBlockFace());
 
         if (plugin.BUCKET_ENABLED) {
             if (plugin.BUCKET_PLACE_SAFE) {
-                plugin.queueSafeBlock(block, plugin.LOG_MANUAL_FLOW, event.getPlayer());
+                if (plugin.getStationaryMaterial(block.getType()) != plugin.getStationaryMaterial(event.getBucket()) || block.getData() != 0 && block.getData() != 15) {
+                    // Create only 1 LB entry instead of 3.
+                    if (plugin.LOG_MANUAL_FLOW) {
+                        plugin.getConsumer().queueBlockReplace(event.getPlayer().getName(), block.getState(), event.getBucket() == Material.WATER_BUCKET ? 9 : 11, (byte) 15);
+                    }
+                    plugin.flag = true;
+                    block.setType(plugin.getStationaryMaterial(event.getBucket()));
+                    block.setData((byte) 15);
+                    plugin.flag = false;
+                }
             }
         }
-        else {
-            event.setCancelled(true);
-        }
+        // 
+        event.setCancelled(true);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -253,10 +258,10 @@ public class SafeBucketsListener implements Listener {
                 boolean safe = plugin.isBlockSafe(block);
                 msg.append(coords).append(" set ").append(safe ? "unsafe." : "safe. ");
                 if (!safe) {
-                    msg.append(plugin.setBlockSafe(block, true, plugin.LOG_MANUAL_FLOW, player)).append(" child blocks affected.");
+                    msg.append(plugin.setBlockSafe(block, true, plugin.LOG_MANUAL_FLOW, player.getName())).append(" child blocks affected.");
                 }
                 else {
-                    plugin.setBlockSafe(block, false, plugin.LOG_MANUAL_FLOW, player);
+                    plugin.setBlockSafe(block, false, plugin.LOG_MANUAL_FLOW, player.getName());
                 }
             }
             else {

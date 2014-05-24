@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import net.minecraft.server.v1_7_R1.TileEntityDispenser;
+import net.minecraft.server.v1_7_R3.TileEntityDispenser;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -18,8 +18,8 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.Dispenser;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.v1_7_R1.block.CraftDispenser;
-import org.bukkit.craftbukkit.v1_7_R1.inventory.CraftInventory;
+import org.bukkit.craftbukkit.v1_7_R3.block.CraftDispenser;
+import org.bukkit.craftbukkit.v1_7_R3.inventory.CraftInventory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;

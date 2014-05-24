@@ -1,17 +1,17 @@
 package nu.nerd.SafeBuckets;
 
-import net.minecraft.server.v1_7_R1.DispenseBehaviorItem;
-import net.minecraft.server.v1_7_R1.Item;
-import net.minecraft.server.v1_7_R1.SourceBlock;
-import net.minecraft.server.v1_7_R1.TileEntityDispenser;
-import net.minecraft.server.v1_7_R1.World;
+import net.minecraft.server.v1_7_R3.DispenseBehaviorItem;
+import net.minecraft.server.v1_7_R3.Item;
+import net.minecraft.server.v1_7_R3.SourceBlock;
+import net.minecraft.server.v1_7_R3.TileEntityDispenser;
+import net.minecraft.server.v1_7_R3.World;
 
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.craftbukkit.v1_7_R1.CraftWorld;
-import org.bukkit.craftbukkit.v1_7_R1.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_7_R1.inventory.CraftInventory;
+import org.bukkit.craftbukkit.v1_7_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_7_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_7_R3.inventory.CraftInventory;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -143,7 +143,7 @@ public class SafeBucketsListener implements Listener {
                         else {
                             stack.setAmount(stack.getAmount() - 1);
                             if (!inv.addItem(new ItemStack(m)).isEmpty()) {
-                                (new DispenseBehaviorItem()).a(new SourceBlock((World) blockDispenser.getWorld(), blockDispenser.getX(), blockDispenser.getY(), blockDispenser.getZ()), new net.minecraft.server.v1_7_R1.ItemStack(Item.d(m.getId()), 1));
+                                (new DispenseBehaviorItem()).a(new SourceBlock((World) blockDispenser.getWorld(), blockDispenser.getX(), blockDispenser.getY(), blockDispenser.getZ()), new net.minecraft.server.v1_7_R3.ItemStack(Item.d(m.getId()), 1));
                             }
                         }
                         blockDispense.setType(Material.AIR);

@@ -23,7 +23,6 @@ import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.block.BlockFadeEvent;
 import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockPhysicsEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
@@ -48,17 +47,21 @@ public class SafeBucketsListener implements Listener {
             Block block = event.getBlock();
             if (block.isLiquid()) {
                 if (plugin.isBlockSafe(block)) {
-                    if (plugin.getStationaryMaterial(event.getChangedType()) != Material.STATIONARY_WATER && plugin.getStationaryMaterial(event.getChangedType()) != Material.STATIONARY_LAVA) {
+                    if (event.getChangedType() == Material.AIR) {
+                        Block above = block.getRelative(BlockFace.UP);
+                        if (above.getType() == plugin.getFlowingMaterial(block.getType())) {
+                            plugin.setBlockSafe(block, false, plugin.LOG_NATURAL_FLOW, plugin.getVirtualName(block));
+                        }
                         event.setCancelled(true);
                     }
-                    else if (plugin.getFlowingMaterial(block.getType()) == event.getChangedType()) {
+                    else if (plugin.getStationaryMaterial(event.getChangedType()) != Material.STATIONARY_WATER && plugin.getStationaryMaterial(event.getChangedType()) != Material.STATIONARY_LAVA) {
                         event.setCancelled(true);
                     }
                     else if (block.getType() == event.getChangedType()) {
                         Block[] adj = new Block[] { block.getRelative(BlockFace.NORTH), block.getRelative(BlockFace.SOUTH), block.getRelative(BlockFace.WEST), block.getRelative(BlockFace.EAST) };
                         for (Block b : adj) {
                             if (b.getType() == plugin.getFlowingMaterial(block.getType()) && b.getData() == block.getData() || b.getType() == block.getType() && b.getData() == 0) {
-                                plugin.setBlockSafe(b, true, plugin.LOG_NATURAL_FLOW, b.getType() == Material.STATIONARY_WATER ? "WaterFlow" : "LavaFlow");
+                                plugin.setBlockSafe(b, true, plugin.LOG_NATURAL_FLOW, plugin.getVirtualName(b));
                             }
                         }
                         event.setCancelled(true);
@@ -66,11 +69,12 @@ public class SafeBucketsListener implements Listener {
                 }
                 else if (block.getData() == 15) {
                     if (event.getChangedType() == plugin.getStationaryMaterial(block.getType())) {
-                        plugin.setBlockSafe(block, true, plugin.LOG_NATURAL_FLOW, block.getType() == Material.WATER ? "WaterFlow" : "LavaFlow");
+                        plugin.setBlockSafe(block, true, plugin.LOG_NATURAL_FLOW, plugin.getVirtualName(block));
                         event.setCancelled(true);
                     }
                     else if (event.getChangedType() == block.getType()) {
-                        block.setData((byte) 14);
+                        plugin.simplifyBelow(block);
+                        event.setCancelled(true);
                     }
                 }
                 else if (block.getData() == 7 && event.getChangedType() == plugin.getFlowingMaterial(block.getType())) {
@@ -82,7 +86,8 @@ public class SafeBucketsListener implements Listener {
                                 return;
                             }
                         }
-                        below.setData((byte) 7);
+                        plugin.simplifyBelow(block);
+                        event.setCancelled(true);
                     }
                 }
             }
@@ -173,7 +178,7 @@ public class SafeBucketsListener implements Listener {
             }
             else {
                 if (plugin.isBlockSafe(event.getToBlock())) {
-                    plugin.setBlockSafe(event.getToBlock(), false, plugin.LOG_NATURAL_FLOW, event.getToBlock().getType() == Material.STATIONARY_WATER ? "WaterFlow" : "LavaFlow");
+                    plugin.setBlockSafe(event.getToBlock(), false, plugin.LOG_NATURAL_FLOW, plugin.getVirtualName(event.getToBlock()));
                     event.setCancelled(true);
                 }
             }
@@ -185,7 +190,8 @@ public class SafeBucketsListener implements Listener {
         if (plugin.BUCKET_PLACE_SAFE) {
             Block b = event.getBlock();
             if (b.getType() == Material.ICE) {
-                // In order to catch this properly, we'll need to cancel the event and push it along a little.
+                // In order to catch this properly, we'll need to cancel the
+                // event and push it along a little.
                 if (plugin.LOG_NATURAL_FLOW) {
                     plugin.getConsumer().queueBlockReplace("SnowFade", b.getState(), 9, (byte) 15);
                 }
@@ -227,10 +233,12 @@ public class SafeBucketsListener implements Listener {
                     block.setData((byte) 15);
                     plugin.flag = false;
                 }
+                event.setCancelled(true);
             }
         }
-        // 
-        event.setCancelled(true);
+        else {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler(ignoreCancelled = true)

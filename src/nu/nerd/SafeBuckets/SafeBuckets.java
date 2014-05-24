@@ -52,7 +52,7 @@ public class SafeBuckets extends JavaPlugin {
     public int REGION_MAX_VOLUME;
 
     public int FLOW_MAX_DEPTH;
-    
+
     public boolean LOG_MANUAL_FLOW;
     public boolean LOG_REGION_FLOW;
     public boolean LOG_NATURAL_FLOW;
@@ -297,15 +297,13 @@ public class SafeBuckets extends JavaPlugin {
 
         try {
             worldedit = (WorldEditPlugin) pm.getPlugin("WorldEdit");
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.log(Level.WARNING, "WorldEdit could not be loaded!");
         }
-        
+
         try {
             lbConsumer = ((LogBlock) pm.getPlugin("LogBlock")).getConsumer();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.log(Level.WARNING, "LogBlock could not be loaded!");
         }
 
@@ -338,7 +336,7 @@ public class SafeBuckets extends JavaPlugin {
     public boolean isBlockSafe(Block block) {
         // Using block data values works better for fluids because this method
         // doesn't use any additional data.
-        if (block.getType() == Material.STATIONARY_WATER || block.getType() == Material.STATIONARY_LAVA) {
+        if (getStationaryMaterial(block.getType()) == Material.STATIONARY_WATER || getStationaryMaterial(block.getType()) == Material.STATIONARY_LAVA) {
             return block.getData() == 15 && !hasEdgeCap(block);
         }
         return false;
@@ -368,27 +366,19 @@ public class SafeBuckets extends JavaPlugin {
             }
         }
         else {
-            if (block.getType() == Material.STATIONARY_WATER && block.getData() == 15) {
+            if (isBlockSafe(block)) {
                 if (log) {
-                    lbConsumer.queueBlockReplace(pName, block.getState(), 8, (byte) 0);
+                    lbConsumer.queueBlockReplace(pName, block.getState(), getStationaryMaterial(block.getType()) == Material.STATIONARY_WATER ? 8 : 10, (byte) 0);
                 }
                 changed++;
-                block.setType(Material.WATER);
-                block.setData((byte) 0);
-            }
-            if (block.getType() == Material.STATIONARY_LAVA && block.getData() == 15) {
-                if (log) {
-                    lbConsumer.queueBlockReplace(pName, block.getState(), 10, (byte) 0);
-                }
-                changed++;
-                block.setType(Material.LAVA);
+                block.setType(getFlowingMaterial(block.getType()));
                 block.setData((byte) 0);
             }
         }
         flag = false;
         return changed;
     }
-    
+
     public Consumer getConsumer() {
         return lbConsumer;
     }
@@ -423,6 +413,27 @@ public class SafeBuckets extends JavaPlugin {
         return count;
     }
 
+    public void simplifyBelow(Block b, boolean f) {
+        if (b.isLiquid()) {
+            if (b.getData() == 7) {
+                b.setType(Material.AIR);
+                b.setData((byte) 0);
+            }
+            else if (b.getData() == 15) {
+                b.setData((byte) 8);
+                if (f) {
+                    b.setType(getFlowingMaterial(b.getType()));
+                }
+                f = false;
+            }
+            simplifyBelow(b.getRelative(BlockFace.DOWN), f);
+        }
+    }
+
+    public void simplifyBelow(Block b) {
+        simplifyBelow(b, true);
+    }
+
     public Material getFlowingMaterial(Material m) {
         if (m == Material.WATER || m == Material.STATIONARY_WATER || m == Material.WATER_BUCKET) {
             return Material.WATER;
@@ -442,7 +453,17 @@ public class SafeBuckets extends JavaPlugin {
         }
         return null;
     }
-    
+
+    public String getVirtualName(Block b) {
+        if (getStationaryMaterial(b.getType()) == Material.STATIONARY_WATER) {
+            return "WaterFlow";
+        }
+        if (getStationaryMaterial(b.getType()) == Material.STATIONARY_LAVA) {
+            return "LavaFlow";
+        }
+        return null;
+    }
+
     public boolean hasEdgeCap(Block block) {
         Block above = block.getRelative(BlockFace.UP);
         if (getStationaryMaterial(above.getType()) == getStationaryMaterial(block.getType())) {
@@ -499,7 +520,7 @@ public class SafeBuckets extends JavaPlugin {
         }
         return false;
     }
-    
+
     public boolean isRegistered(TileEntityDispenser d) {
         return d.getInventoryName().startsWith(registeredCode);
     }

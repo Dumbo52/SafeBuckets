@@ -1,7 +1,15 @@
 package nu.nerd.SafeBuckets;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
+
+import net.minecraft.server.v1_7_R3.MathHelper;
+import net.minecraft.server.v1_7_R3.Vec3D;
 import net.minecraft.server.v1_7_R3.DispenseBehaviorItem;
+import net.minecraft.server.v1_7_R3.EntityHuman;
+import net.minecraft.server.v1_7_R3.EnumMovingObjectType;
 import net.minecraft.server.v1_7_R3.Item;
+import net.minecraft.server.v1_7_R3.MovingObjectPosition;
 import net.minecraft.server.v1_7_R3.SourceBlock;
 import net.minecraft.server.v1_7_R3.TileEntityDispenser;
 import net.minecraft.server.v1_7_R3.World;
@@ -12,6 +20,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.v1_7_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_7_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_7_R3.inventory.CraftInventory;
+import org.bukkit.craftbukkit.v1_7_R3.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -232,6 +241,9 @@ public class SafeBucketsListener implements Listener {
                     block.setType(plugin.getStationaryMaterial(event.getBucket()));
                     block.setData((byte) 15);
                     plugin.flag = false;
+                    if (!((CraftPlayer) event.getPlayer()).getHandle().abilities.canInstantlyBuild) {
+                        event.getPlayer().getItemInHand().setType(Material.BUCKET);
+                    }
                 }
                 event.setCancelled(true);
             }
@@ -244,6 +256,21 @@ public class SafeBucketsListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
+
+        if (event.getMaterial() == Material.BUCKET && (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)) {
+            MovingObjectPosition pos = plugin.raytrace(((CraftPlayer) player).getHandle(), ((CraftWorld) player.getWorld()).getHandle());
+            if (pos != null && pos.type == EnumMovingObjectType.BLOCK) {
+                Block clicked = player.getWorld().getBlockAt(pos.b, pos.c, pos.d);
+                if (plugin.isBlockSafe(clicked)) {
+                    if (!((CraftPlayer) event.getPlayer()).getHandle().abilities.canInstantlyBuild) {
+                        event.getPlayer().getItemInHand().setType(plugin.getBucketMaterial(clicked.getType()));
+                    }
+                    clicked.setType(Material.AIR);
+                    clicked.setData((byte) 0);
+                    event.setCancelled(true);
+                }
+            }
+        }
 
         if (event.isBlockInHand() && event.getItem().getType() == plugin.TOOL_BLOCK && player.hasPermission("safebuckets.tools.block.use") && event.getAction() == Action.RIGHT_CLICK_BLOCK && plugin.canUseToolBlock(player)) {
             Block block = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().getBlock();

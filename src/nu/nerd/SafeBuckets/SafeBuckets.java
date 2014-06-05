@@ -6,7 +6,11 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import net.minecraft.server.v1_7_R3.EntityHuman;
+import net.minecraft.server.v1_7_R3.MathHelper;
+import net.minecraft.server.v1_7_R3.MovingObjectPosition;
 import net.minecraft.server.v1_7_R3.TileEntityDispenser;
+import net.minecraft.server.v1_7_R3.Vec3D;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -454,6 +458,16 @@ public class SafeBuckets extends JavaPlugin {
         return null;
     }
 
+    public Material getBucketMaterial(Material m) {
+        if (m == Material.WATER || m == Material.STATIONARY_WATER || m == Material.WATER_BUCKET) {
+            return Material.WATER_BUCKET;
+        }
+        if (m == Material.LAVA || m == Material.STATIONARY_LAVA || m == Material.LAVA_BUCKET) {
+            return Material.LAVA_BUCKET;
+        }
+        return Material.BUCKET;
+    }
+
     public String getVirtualName(Block b) {
         if (getStationaryMaterial(b.getType()) == Material.STATIONARY_WATER) {
             return "WaterFlow";
@@ -475,6 +489,187 @@ public class SafeBuckets extends JavaPlugin {
             }
         }
         return false;
+    }
+
+    public MovingObjectPosition raytrace(EntityHuman nmsPlayer, net.minecraft.server.v1_7_R3.World nmsWorld) {
+        // TODO Clean me up! This code modified from MC source.
+
+        // net.minecraft.server.v1_7_R3.Item.a(World, EntityHuman, boolean)
+        Vec3D vec3d;
+        Vec3D vec3d1;
+        {
+            float f = 1.0F;
+            float f1 = nmsPlayer.lastPitch + (nmsPlayer.pitch - nmsPlayer.lastPitch) * f;
+            float f2 = nmsPlayer.lastYaw + (nmsPlayer.yaw - nmsPlayer.lastYaw) * f;
+            double d0 = nmsPlayer.lastX + (nmsPlayer.locX - nmsPlayer.lastX) * (double) f;
+            double d1 = nmsPlayer.lastY + (nmsPlayer.locY - nmsPlayer.lastY) * (double) f + 1.62D - (double) nmsPlayer.height;
+            double d2 = nmsPlayer.lastZ + (nmsPlayer.locZ - nmsPlayer.lastZ) * (double) f;
+            vec3d = Vec3D.a(d0, d1, d2);
+            float f3 = MathHelper.cos(-f2 * 0.017453292F - 3.1415927F);
+            float f4 = MathHelper.sin(-f2 * 0.017453292F - 3.1415927F);
+            float f5 = -MathHelper.cos(-f1 * 0.017453292F);
+            float f6 = MathHelper.sin(-f1 * 0.017453292F);
+            float f7 = f4 * f5;
+            float f8 = f3 * f5;
+            double d3 = 5.0D;
+            vec3d1 = vec3d.add((double) f7 * d3, (double) f6 * d3, (double) f8 * d3);
+        }
+
+        // net.minecraft.server.v1_7_R3.World.rayTrace(Vec3D, Vec3D, boolean,
+        // boolean, boolean) {
+        {
+            int i = MathHelper.floor(vec3d1.a);
+            int j = MathHelper.floor(vec3d1.b);
+            int k = MathHelper.floor(vec3d1.c);
+            int l = MathHelper.floor(vec3d.a);
+            int i1 = MathHelper.floor(vec3d.b);
+            int j1 = MathHelper.floor(vec3d.c);
+            net.minecraft.server.v1_7_R3.Block block = nmsWorld.getType(l, i1, j1);
+            int k1 = nmsWorld.getData(l, i1, j1);
+
+            if (block.a(k1, true) || isBlockSafe(nmsPlayer.getBukkitEntity().getWorld().getBlockAt(l, i1, j1))) {
+                return block.a(nmsWorld, l, i1, j1, vec3d, vec3d1);
+            }
+
+            k1 = 200;
+
+            while (k1-- >= 0) {
+                if (Double.isNaN(vec3d.a) || Double.isNaN(vec3d.b) || Double.isNaN(vec3d.c)) {
+                    return null;
+                }
+
+                if (l == i && i1 == j && j1 == k) {
+                    return null;
+                }
+
+                boolean flag3 = true;
+                boolean flag4 = true;
+                boolean flag5 = true;
+                double d0 = 999.0D;
+                double d1 = 999.0D;
+                double d2 = 999.0D;
+
+                if (i > l) {
+                    d0 = (double) l + 1.0D;
+                }
+                else if (i < l) {
+                    d0 = (double) l + 0.0D;
+                }
+                else {
+                    flag3 = false;
+                }
+
+                if (j > i1) {
+                    d1 = (double) i1 + 1.0D;
+                }
+                else if (j < i1) {
+                    d1 = (double) i1 + 0.0D;
+                }
+                else {
+                    flag4 = false;
+                }
+
+                if (k > j1) {
+                    d2 = (double) j1 + 1.0D;
+                }
+                else if (k < j1) {
+                    d2 = (double) j1 + 0.0D;
+                }
+                else {
+                    flag5 = false;
+                }
+
+                double d3 = 999.0D;
+                double d4 = 999.0D;
+                double d5 = 999.0D;
+                double d6 = vec3d1.a - vec3d.a;
+                double d7 = vec3d1.b - vec3d.b;
+                double d8 = vec3d1.c - vec3d.c;
+
+                if (flag3) {
+                    d3 = (d0 - vec3d.a) / d6;
+                }
+
+                if (flag4) {
+                    d4 = (d1 - vec3d.b) / d7;
+                }
+
+                if (flag5) {
+                    d5 = (d2 - vec3d.c) / d8;
+                }
+
+                byte b0;
+
+                if (d3 < d4 && d3 < d5) {
+                    if (i > l) {
+                        b0 = 4;
+                    }
+                    else {
+                        b0 = 5;
+                    }
+
+                    vec3d.a = d0;
+                    vec3d.b += d7 * d3;
+                    vec3d.c += d8 * d3;
+                }
+                else if (d4 < d5) {
+                    if (j > i1) {
+                        b0 = 0;
+                    }
+                    else {
+                        b0 = 1;
+                    }
+
+                    vec3d.a += d6 * d4;
+                    vec3d.b = d1;
+                    vec3d.c += d8 * d4;
+                }
+                else {
+                    if (k > j1) {
+                        b0 = 2;
+                    }
+                    else {
+                        b0 = 3;
+                    }
+
+                    vec3d.a += d6 * d5;
+                    vec3d.b += d7 * d5;
+                    vec3d.c = d2;
+                }
+
+                Vec3D vec3d2 = Vec3D.a(vec3d.a, vec3d.b, vec3d.c);
+
+                l = (int) (vec3d2.a = (double) MathHelper.floor(vec3d.a));
+                if (b0 == 5) {
+                    --l;
+                    ++vec3d2.a;
+                }
+
+                i1 = (int) (vec3d2.b = (double) MathHelper.floor(vec3d.b));
+                if (b0 == 1) {
+                    --i1;
+                    ++vec3d2.b;
+                }
+
+                j1 = (int) (vec3d2.c = (double) MathHelper.floor(vec3d.c));
+                if (b0 == 3) {
+                    --j1;
+                    ++vec3d2.c;
+                }
+
+                net.minecraft.server.v1_7_R3.Block block1 = nmsWorld.getType(l, i1, j1);
+                int l1 = nmsWorld.getData(l, i1, j1);
+
+                if (block1.a(l1, true) || isBlockSafe(nmsPlayer.getBukkitEntity().getWorld().getBlockAt(l, i1, j1))) {
+                    MovingObjectPosition movingobjectposition2 = block1.a(nmsWorld, l, i1, j1, vec3d, vec3d1);
+
+                    if (movingobjectposition2 != null) {
+                        return movingobjectposition2;
+                    }
+                }
+            }
+            return null;
+        }
     }
 
     public int setRegionSafe(Location p1, Location p2, boolean safe, Player issuer) {

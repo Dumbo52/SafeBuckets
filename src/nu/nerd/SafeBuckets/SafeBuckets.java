@@ -305,6 +305,7 @@ public class SafeBuckets extends JavaPlugin {
             log.log(Level.WARNING, "WorldEdit could not be loaded!");
         }
 
+        // TODO Support both LogBlock and Prism
         try {
             lbConsumer = ((LogBlock) pm.getPlugin("LogBlock")).getConsumer();
         } catch (Exception e) {
@@ -352,7 +353,7 @@ public class SafeBuckets extends JavaPlugin {
         if (safe) {
             if (block.getData() == 0) {
                 if (block.getType() == Material.WATER || block.getType() == Material.STATIONARY_WATER) {
-                    if (log) {
+                    if (log && lbConsumer != null) {
                         lbConsumer.queueBlockReplace(pName, block.getState(), 9, (byte) 15);
                     }
                     changed += removeChildFlows(block, 0);
@@ -360,7 +361,7 @@ public class SafeBuckets extends JavaPlugin {
                     block.setData((byte) 15);
                 }
                 if (block.getType() == Material.LAVA || block.getType() == Material.STATIONARY_LAVA) {
-                    if (log) {
+                    if (log && lbConsumer != null) {
                         lbConsumer.queueBlockReplace(pName, block.getState(), 11, (byte) 15);
                     }
                     changed += removeChildFlows(block, 0);
@@ -371,7 +372,7 @@ public class SafeBuckets extends JavaPlugin {
         }
         else {
             if (isBlockSafe(block)) {
-                if (log) {
+                if (log && lbConsumer != null) {
                     lbConsumer.queueBlockReplace(pName, block.getState(), getStationaryMaterial(block.getType()) == Material.STATIONARY_WATER ? 8 : 10, (byte) 0);
                 }
                 changed++;

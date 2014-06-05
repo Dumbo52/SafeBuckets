@@ -201,7 +201,7 @@ public class SafeBucketsListener implements Listener {
             if (b.getType() == Material.ICE) {
                 // In order to catch this properly, we'll need to cancel the
                 // event and push it along a little.
-                if (plugin.LOG_NATURAL_FLOW) {
+                if (plugin.LOG_NATURAL_FLOW && plugin.getConsumer() != null) {
                     plugin.getConsumer().queueBlockReplace("SnowFade", b.getState(), 9, (byte) 15);
                 }
                 b.setType(Material.STATIONARY_WATER);
@@ -234,7 +234,7 @@ public class SafeBucketsListener implements Listener {
             if (plugin.BUCKET_PLACE_SAFE) {
                 if (plugin.getStationaryMaterial(block.getType()) != plugin.getStationaryMaterial(event.getBucket()) || block.getData() != 0 && block.getData() != 15) {
                     // Create only 1 LB entry instead of 3.
-                    if (plugin.LOG_MANUAL_FLOW) {
+                    if (plugin.LOG_MANUAL_FLOW && plugin.getConsumer() != null) {
                         plugin.getConsumer().queueBlockReplace(event.getPlayer().getName(), block.getState(), event.getBucket() == Material.WATER_BUCKET ? 9 : 11, (byte) 15);
                     }
                     plugin.flag = true;

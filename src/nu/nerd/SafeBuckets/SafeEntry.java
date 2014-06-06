@@ -1,10 +1,12 @@
 package nu.nerd.SafeBuckets;
 
+import org.bukkit.entity.Player;
+
 public class SafeEntry {
     private long time;
     private boolean log;
-    private String player;
-    public SafeEntry(long time, boolean log, String player) {
+    private Player player;
+    public SafeEntry(long time, boolean log, Player player) {
         this.time = time;
         this.log = log;
         this.player = player;
@@ -15,7 +17,7 @@ public class SafeEntry {
     public boolean isLogged() {
         return log;
     }
-    public String getPlayer() {
+    public Player getPlayer() {
         return player;
     }
 }

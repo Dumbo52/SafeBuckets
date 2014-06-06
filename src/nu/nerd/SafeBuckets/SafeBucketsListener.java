@@ -1,12 +1,6 @@
 package nu.nerd.SafeBuckets;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
-
-import net.minecraft.server.v1_7_R3.MathHelper;
-import net.minecraft.server.v1_7_R3.Vec3D;
 import net.minecraft.server.v1_7_R3.DispenseBehaviorItem;
-import net.minecraft.server.v1_7_R3.EntityHuman;
 import net.minecraft.server.v1_7_R3.EnumMovingObjectType;
 import net.minecraft.server.v1_7_R3.Item;
 import net.minecraft.server.v1_7_R3.MovingObjectPosition;
@@ -17,10 +11,10 @@ import net.minecraft.server.v1_7_R3.World;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.craftbukkit.v1_7_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_7_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_7_R3.inventory.CraftInventory;
-import org.bukkit.craftbukkit.v1_7_R3.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -59,7 +53,7 @@ public class SafeBucketsListener implements Listener {
                     if (event.getChangedType() == Material.AIR) {
                         Block above = block.getRelative(BlockFace.UP);
                         if (above.getType() == plugin.getFlowingMaterial(block.getType())) {
-                            plugin.setBlockSafe(block, false, plugin.LOG_NATURAL_FLOW, plugin.getVirtualName(block));
+                            plugin.setBlockSafe(block, false, plugin.LOG_NATURAL_FLOW);
                         }
                         event.setCancelled(true);
                     }
@@ -70,7 +64,7 @@ public class SafeBucketsListener implements Listener {
                         Block[] adj = new Block[] { block.getRelative(BlockFace.NORTH), block.getRelative(BlockFace.SOUTH), block.getRelative(BlockFace.WEST), block.getRelative(BlockFace.EAST) };
                         for (Block b : adj) {
                             if (b.getType() == plugin.getFlowingMaterial(block.getType()) && b.getData() == block.getData() || b.getType() == block.getType() && b.getData() == 0) {
-                                plugin.setBlockSafe(b, true, plugin.LOG_NATURAL_FLOW, plugin.getVirtualName(b));
+                                plugin.setBlockSafe(b, true, plugin.LOG_NATURAL_FLOW);
                             }
                         }
                         event.setCancelled(true);
@@ -78,7 +72,7 @@ public class SafeBucketsListener implements Listener {
                 }
                 else if (block.getData() == 15) {
                     if (event.getChangedType() == plugin.getStationaryMaterial(block.getType())) {
-                        plugin.setBlockSafe(block, true, plugin.LOG_NATURAL_FLOW, plugin.getVirtualName(block));
+                        plugin.setBlockSafe(block, true, plugin.LOG_NATURAL_FLOW);
                         event.setCancelled(true);
                     }
                     else if (event.getChangedType() == block.getType()) {
@@ -187,7 +181,7 @@ public class SafeBucketsListener implements Listener {
             }
             else {
                 if (plugin.isBlockSafe(event.getToBlock())) {
-                    plugin.setBlockSafe(event.getToBlock(), false, plugin.LOG_NATURAL_FLOW, plugin.getVirtualName(event.getToBlock()));
+                    plugin.setBlockSafe(event.getToBlock(), false, plugin.LOG_NATURAL_FLOW);
                     event.setCancelled(true);
                 }
             }
@@ -201,12 +195,11 @@ public class SafeBucketsListener implements Listener {
             if (b.getType() == Material.ICE) {
                 // In order to catch this properly, we'll need to cancel the
                 // event and push it along a little.
-                if (plugin.LOG_NATURAL_FLOW && plugin.getConsumer() != null) {
-                    plugin.getConsumer().queueBlockReplace("SnowFade", b.getState(), 9, (byte) 15);
-                }
+                BlockState prev = b.getState(); // TODO Log ice
                 b.setType(Material.STATIONARY_WATER);
                 b.setData((byte) 15);
                 event.setCancelled(true);
+                plugin.eventLogger.logEvent(plugin.LOG_NATURAL_FLOW, null, prev, b);
             }
         }
     }
@@ -220,7 +213,7 @@ public class SafeBucketsListener implements Listener {
                     // If we are breaking the block with an enchanted pick then
                     // don't replace it with air, we want it to drop as an item
                     // event.getBlock().setTypeId(0);
-                    plugin.queueSafeBlock(block, plugin.LOG_MANUAL_FLOW, event.getPlayer().getName());
+                    plugin.queueSafeBlock(block, plugin.LOG_MANUAL_FLOW, event.getPlayer());
                 }
             }
         }
@@ -233,10 +226,7 @@ public class SafeBucketsListener implements Listener {
         if (plugin.BUCKET_ENABLED) {
             if (plugin.BUCKET_PLACE_SAFE) {
                 if (plugin.getStationaryMaterial(block.getType()) != plugin.getStationaryMaterial(event.getBucket()) || block.getData() != 0 && block.getData() != 15) {
-                    // Create only 1 LB entry instead of 3.
-                    if (plugin.LOG_MANUAL_FLOW && plugin.getConsumer() != null) {
-                        plugin.getConsumer().queueBlockReplace(event.getPlayer().getName(), block.getState(), event.getBucket() == Material.WATER_BUCKET ? 9 : 11, (byte) 15);
-                    }
+                    BlockState prev = block.getState();
                     plugin.flag = true;
                     block.setType(plugin.getStationaryMaterial(event.getBucket()));
                     block.setData((byte) 15);
@@ -244,6 +234,7 @@ public class SafeBucketsListener implements Listener {
                     if (!((CraftPlayer) event.getPlayer()).getHandle().abilities.canInstantlyBuild) {
                         event.getPlayer().getItemInHand().setType(Material.BUCKET);
                     }
+                    plugin.eventLogger.logEvent(plugin.LOG_MANUAL_FLOW, event.getPlayer(), prev, block);
                 }
                 event.setCancelled(true);
             }
@@ -265,8 +256,10 @@ public class SafeBucketsListener implements Listener {
                     if (!((CraftPlayer) event.getPlayer()).getHandle().abilities.canInstantlyBuild) {
                         event.getPlayer().getItemInHand().setType(plugin.getBucketMaterial(clicked.getType()));
                     }
+                    BlockState prev = clicked.getState();
                     clicked.setType(Material.AIR);
                     clicked.setData((byte) 0);
+                    plugin.eventLogger.logEvent(event.getPlayer(), prev, clicked);
                     event.setCancelled(true);
                 }
             }
@@ -293,10 +286,10 @@ public class SafeBucketsListener implements Listener {
                 boolean safe = plugin.isBlockSafe(block);
                 msg.append(coords).append(" set ").append(safe ? "unsafe." : "safe. ");
                 if (!safe) {
-                    msg.append(plugin.setBlockSafe(block, true, plugin.LOG_MANUAL_FLOW, player.getName())).append(" child blocks affected.");
+                    msg.append(plugin.setBlockSafe(block, true, plugin.LOG_MANUAL_FLOW, player)).append(" child blocks affected.");
                 }
                 else {
-                    plugin.setBlockSafe(block, false, plugin.LOG_MANUAL_FLOW, player.getName());
+                    plugin.setBlockSafe(block, false, plugin.LOG_MANUAL_FLOW, player);
                 }
             }
             else {
@@ -333,4 +326,21 @@ public class SafeBucketsListener implements Listener {
             event.setCancelled(true);
         }
     }
+
+    // Prism events
+    // Prism only provides an event call for rollbacks, not restores.
+    // TODO Make this work in the future?
+    /*
+     * @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+     * public void onPrismBlocksRollbackEvent(PrismBlocksRollbackEvent event) {
+     * for (BlockStateChange change : event.getBlockStateChanges()) { BlockState
+     * before = change.getOriginalBlock(); BlockState after =
+     * change.getNewBlock(); Material mat =
+     * plugin.getStationaryMaterial(after.getType()); if ((mat ==
+     * Material.STATIONARY_WATER || mat == Material.STATIONARY_LAVA) &&
+     * plugin.getStationaryMaterial(before.getType()) == mat) { if
+     * (before.getRawData() == 0 && after.getRawData() == 15) {
+     * plugin.removeChildFlows(after.getBlock(), 0); } } } }
+     */
+
 }

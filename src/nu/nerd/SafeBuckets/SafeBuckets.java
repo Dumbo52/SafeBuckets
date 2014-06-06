@@ -6,6 +6,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import me.botsko.prism.Prism;
+import me.botsko.prism.actionlibs.ActionType;
 import net.minecraft.server.v1_7_R3.EntityHuman;
 import net.minecraft.server.v1_7_R3.MathHelper;
 import net.minecraft.server.v1_7_R3.MovingObjectPosition;
@@ -19,6 +21,7 @@ import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Dispenser;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -26,6 +29,7 @@ import org.bukkit.craftbukkit.v1_7_R3.block.CraftDispenser;
 import org.bukkit.craftbukkit.v1_7_R3.inventory.CraftInventory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -33,7 +37,6 @@ import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.sk89q.worldedit.bukkit.selections.CuboidSelection;
 import com.sk89q.worldedit.bukkit.selections.Selection;
 
-import de.diddiz.LogBlock.Consumer;
 import de.diddiz.LogBlock.LogBlock;
 
 public class SafeBuckets extends JavaPlugin {
@@ -66,7 +69,7 @@ public class SafeBuckets extends JavaPlugin {
     private Set<String> toolPlayers = new HashSet<String>();
     private Set<String> toolblockPlayers = new HashSet<String>();
     private WorldEditPlugin worldedit;
-    private Consumer lbConsumer;
+    public EventLogger eventLogger;
 
     public static final Logger log = Logger.getLogger("Minecraft");
     public HashMap<Location, SafeEntry> blockCache = new HashMap<Location, SafeEntry>();
@@ -299,17 +302,36 @@ public class SafeBuckets extends JavaPlugin {
         PluginManager pm = this.getServer().getPluginManager();
         pm.registerEvents(l, this);
 
-        try {
-            worldedit = (WorldEditPlugin) pm.getPlugin("WorldEdit");
-        } catch (Exception e) {
-            log.log(Level.WARNING, "WorldEdit could not be loaded!");
+        Plugin wepl = pm.getPlugin("WorldEdit");
+        if (wepl == null) {
+            log.log(Level.WARNING, "[" + getDescription().getName() + "] WorldEdit could not be loaded!");
+        }
+        else {
+            worldedit = (WorldEditPlugin) wepl;
         }
 
-        // TODO Support both LogBlock and Prism
-        try {
-            lbConsumer = ((LogBlock) pm.getPlugin("LogBlock")).getConsumer();
-        } catch (Exception e) {
-            log.log(Level.WARNING, "LogBlock could not be loaded!");
+        eventLogger = new EventLogger(this);
+
+        Plugin prpl = pm.getPlugin("Prism");
+        if (prpl != null) {
+            try {
+                Prism.getActionRegistry().registerCustomAction(this, new ActionType("safebuckets-fluid-safe", true, true, true, "BlockChangeAction", "set safe"));
+                Prism.getActionRegistry().registerCustomAction(this, new ActionType("safebuckets-fluid-unsafe", true, true, true, "BlockChangeAction", "set unsafe"));
+                // pm.registerEvents(l, (Prism) prpl);
+                eventLogger.enablePrism();
+                log.log(Level.INFO, "[" + getDescription().getName() + "] Logging events using Prism.");
+            } catch (Exception e) {
+            }
+        }
+
+        Plugin lbpl = pm.getPlugin("LogBlock");
+        if (lbpl != null) {
+            eventLogger.enableLogBlock((LogBlock) lbpl);
+            log.log(Level.INFO, "[" + getDescription().getName() + "] Logging events using LogBlock.");
+        }
+
+        if (!eventLogger.canLog()) {
+            log.log(Level.WARNING, "[" + getDescription().getName() + "] Neither Prism nor LogBlock found - logging disabled!");
         }
 
         log.log(Level.INFO, "[" + getDescription().getName() + "] " + getDescription().getVersion() + " enabled.");
@@ -347,45 +369,42 @@ public class SafeBuckets extends JavaPlugin {
         return false;
     }
 
-    public int setBlockSafe(Block block, boolean safe, boolean log, String pName) {
+    public int setBlockSafe(Block block, boolean safe, boolean log) {
+        return setBlockSafe(block, safe, log, null);
+    }
+
+    public int setBlockSafe(Block block, boolean safe, boolean log, Player player) {
         flag = true;
         int changed = 0;
         if (safe) {
             if (block.getData() == 0) {
                 if (block.getType() == Material.WATER || block.getType() == Material.STATIONARY_WATER) {
-                    if (log && lbConsumer != null) {
-                        lbConsumer.queueBlockReplace(pName, block.getState(), 9, (byte) 15);
-                    }
+                    BlockState prev = block.getState();
                     changed += removeChildFlows(block, 0);
                     block.setType(Material.STATIONARY_WATER);
                     block.setData((byte) 15);
+                    eventLogger.logEvent(log, player, prev, block);
                 }
                 if (block.getType() == Material.LAVA || block.getType() == Material.STATIONARY_LAVA) {
-                    if (log && lbConsumer != null) {
-                        lbConsumer.queueBlockReplace(pName, block.getState(), 11, (byte) 15);
-                    }
+                    BlockState prev = block.getState();
                     changed += removeChildFlows(block, 0);
                     block.setType(Material.STATIONARY_LAVA);
                     block.setData((byte) 15);
+                    eventLogger.logEvent(log, player, prev, block);
                 }
             }
         }
         else {
             if (isBlockSafe(block)) {
-                if (log && lbConsumer != null) {
-                    lbConsumer.queueBlockReplace(pName, block.getState(), getStationaryMaterial(block.getType()) == Material.STATIONARY_WATER ? 8 : 10, (byte) 0);
-                }
+                BlockState prev = block.getState();
                 changed++;
                 block.setType(getFlowingMaterial(block.getType()));
                 block.setData((byte) 0);
+                eventLogger.logEvent(log, player, prev, block);
             }
         }
         flag = false;
         return changed;
-    }
-
-    public Consumer getConsumer() {
-        return lbConsumer;
     }
 
     public int removeChildFlows(Block block, int depth) {
@@ -686,15 +705,15 @@ public class SafeBuckets extends JavaPlugin {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
                     Block b = world.getBlockAt(x, y, z);
-                    count += setBlockSafe(b, safe, LOG_REGION_FLOW, issuer.getName());
+                    count += setBlockSafe(b, safe, LOG_REGION_FLOW, issuer);
                 }
             }
         }
         return count;
     }
 
-    public void queueSafeBlock(Block block, boolean log, String pName) {
-        blockCache.put(block.getLocation(), new SafeEntry(block.getWorld().getTime(), log, pName));
+    public void queueSafeBlock(Block block, boolean log, Player player) {
+        blockCache.put(block.getLocation(), new SafeEntry(block.getWorld().getTime(), log, player));
     }
 
     public void registerBlock(Block block, boolean reg) {

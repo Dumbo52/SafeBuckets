@@ -3,6 +3,7 @@ package nu.nerd.SafeBuckets;
 import net.minecraft.server.v1_7_R3.DispenseBehaviorItem;
 import net.minecraft.server.v1_7_R3.EnumMovingObjectType;
 import net.minecraft.server.v1_7_R3.Item;
+import net.minecraft.server.v1_7_R3.Items;
 import net.minecraft.server.v1_7_R3.MovingObjectPosition;
 import net.minecraft.server.v1_7_R3.SourceBlock;
 import net.minecraft.server.v1_7_R3.TileEntityDispenser;
@@ -195,7 +196,7 @@ public class SafeBucketsListener implements Listener {
             if (b.getType() == Material.ICE) {
                 // In order to catch this properly, we'll need to cancel the
                 // event and push it along a little.
-                BlockState prev = b.getState(); // TODO Log ice
+                BlockState prev = b.getState();
                 b.setType(Material.STATIONARY_WATER);
                 b.setData((byte) 15);
                 event.setCancelled(true);
@@ -260,6 +261,33 @@ public class SafeBucketsListener implements Listener {
                     clicked.setType(Material.AIR);
                     clicked.setData((byte) 0);
                     plugin.eventLogger.logEvent(event.getPlayer(), prev, clicked);
+                    event.setCancelled(true);
+                }
+            }
+        }
+        
+        if (event.getMaterial() == Material.GLASS_BOTTLE && (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)) {
+            MovingObjectPosition pos = plugin.raytrace(((CraftPlayer) player).getHandle(), ((CraftWorld) player.getWorld()).getHandle());
+            if (pos != null && pos.type == EnumMovingObjectType.BLOCK) {
+                Block clicked = player.getWorld().getBlockAt(pos.b, pos.c, pos.d);
+                if (plugin.isBlockSafe(clicked) && clicked.getType() == Material.STATIONARY_WATER) {
+                    ItemStack stack = player.getItemInHand();
+                    boolean creative = ((CraftPlayer) player).getHandle().abilities.canInstantlyBuild;
+                    if (!creative) {
+                        stack.setAmount(stack.getAmount() - 1);
+                    }
+                    if (stack.getAmount() <= 0 || creative && stack.getAmount() == 1) {
+                        stack.setType(Material.POTION);
+                        stack.setAmount(1);
+                    }
+                    else {
+                        if (!player.getInventory().addItem(new ItemStack(Material.POTION)).isEmpty()) {
+                            ((CraftPlayer) player).getHandle().drop(new net.minecraft.server.v1_7_R3.ItemStack(Items.POTION, 1, 0), false);
+                        }
+                        else {
+                            player.updateInventory();
+                        }
+                    }
                     event.setCancelled(true);
                 }
             }

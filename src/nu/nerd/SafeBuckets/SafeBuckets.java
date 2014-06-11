@@ -1,6 +1,5 @@
 package nu.nerd.SafeBuckets;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
@@ -11,22 +10,15 @@ import me.botsko.prism.actionlibs.ActionType;
 import net.minecraft.server.v1_7_R3.EntityHuman;
 import net.minecraft.server.v1_7_R3.MathHelper;
 import net.minecraft.server.v1_7_R3.MovingObjectPosition;
-import net.minecraft.server.v1_7_R3.TileEntityDispenser;
 import net.minecraft.server.v1_7_R3.Vec3D;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
-import org.bukkit.block.Dispenser;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.v1_7_R3.block.CraftDispenser;
-import org.bukkit.craftbukkit.v1_7_R3.inventory.CraftInventory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -65,15 +57,11 @@ public class SafeBuckets extends JavaPlugin {
     public boolean LOG_NATURAL_FLOW;
 
     private final SafeBucketsListener l = new SafeBucketsListener(this);
-    private final String registeredCode = ChatColor.STRIKETHROUGH.toString() + ChatColor.RESET.toString();
     private Set<String> toolPlayers = new HashSet<String>();
     private Set<String> toolblockPlayers = new HashSet<String>();
     private WorldEditPlugin worldedit;
-    public EventLogger eventLogger;
 
     public static final Logger log = Logger.getLogger("Minecraft");
-    public HashMap<Location, SafeEntry> blockCache = new HashMap<Location, SafeEntry>();
-    public boolean flag = false;
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
@@ -310,15 +298,13 @@ public class SafeBuckets extends JavaPlugin {
             worldedit = (WorldEditPlugin) wepl;
         }
 
-        eventLogger = new EventLogger(this);
-
         Plugin prpl = pm.getPlugin("Prism");
         if (prpl != null) {
             try {
                 Prism.getActionRegistry().registerCustomAction(this, new ActionType("safebuckets-fluid-safe", true, true, true, "BlockChangeAction", "set safe"));
                 Prism.getActionRegistry().registerCustomAction(this, new ActionType("safebuckets-fluid-unsafe", true, true, true, "BlockChangeAction", "set unsafe"));
                 // pm.registerEvents(l, (Prism) prpl);
-                eventLogger.enablePrism();
+                EventLogger.enablePrism();
                 log.log(Level.INFO, "[" + getDescription().getName() + "] Logging events using Prism.");
             } catch (Exception e) {
             }
@@ -326,11 +312,11 @@ public class SafeBuckets extends JavaPlugin {
 
         Plugin lbpl = pm.getPlugin("LogBlock");
         if (lbpl != null) {
-            eventLogger.enableLogBlock((LogBlock) lbpl);
+            EventLogger.enableLogBlock((LogBlock) lbpl);
             log.log(Level.INFO, "[" + getDescription().getName() + "] Logging events using LogBlock.");
         }
 
-        if (!eventLogger.canLog()) {
+        if (!EventLogger.canLog()) {
             log.log(Level.WARNING, "[" + getDescription().getName() + "] Neither Prism nor LogBlock found - logging disabled!");
         }
 
@@ -358,157 +344,6 @@ public class SafeBuckets extends JavaPlugin {
 
     public void message(CommandSender sender, String msg) {
         sender.sendMessage(ChatColor.AQUA + "SafeBuckets: " + msg);
-    }
-
-    public boolean isBlockSafe(Block block) {
-        // Using block data values works better for fluids because this method
-        // doesn't use any additional data.
-        if (getStationaryMaterial(block.getType()) == Material.STATIONARY_WATER || getStationaryMaterial(block.getType()) == Material.STATIONARY_LAVA) {
-            return block.getData() == 15 && !hasEdgeCap(block);
-        }
-        return false;
-    }
-
-    public int setBlockSafe(Block block, boolean safe, boolean log) {
-        return setBlockSafe(block, safe, log, null);
-    }
-
-    public int setBlockSafe(Block block, boolean safe, boolean log, Player player) {
-        flag = true;
-        int changed = 0;
-        if (safe) {
-            if (block.getData() == 0) {
-                if (block.getType() == Material.WATER || block.getType() == Material.STATIONARY_WATER) {
-                    BlockState prev = block.getState();
-                    changed += removeChildFlows(block, 0);
-                    block.setType(Material.STATIONARY_WATER);
-                    block.setData((byte) 15);
-                    eventLogger.logEvent(log, player, prev, block);
-                }
-                if (block.getType() == Material.LAVA || block.getType() == Material.STATIONARY_LAVA) {
-                    BlockState prev = block.getState();
-                    changed += removeChildFlows(block, 0);
-                    block.setType(Material.STATIONARY_LAVA);
-                    block.setData((byte) 15);
-                    eventLogger.logEvent(log, player, prev, block);
-                }
-            }
-        }
-        else {
-            if (isBlockSafe(block)) {
-                BlockState prev = block.getState();
-                changed++;
-                block.setType(getFlowingMaterial(block.getType()));
-                block.setData((byte) 0);
-                eventLogger.logEvent(log, player, prev, block);
-            }
-        }
-        flag = false;
-        return changed;
-    }
-
-    public int removeChildFlows(Block block, int depth) {
-        if (depth == FLOW_MAX_DEPTH) {
-            return 0;
-        }
-        int count = 0;
-        BlockFace[] sides = new BlockFace[] { BlockFace.NORTH, BlockFace.SOUTH, BlockFace.WEST, BlockFace.EAST };
-        int factor = block.getWorld().getEnvironment() != Environment.NETHER && getStationaryMaterial(block.getType()) == Material.STATIONARY_LAVA ? 2 : 1;
-        for (BlockFace b : sides) {
-            Block adj = block.getRelative(b);
-            if (getStationaryMaterial(adj.getType()) == getStationaryMaterial(block.getType())) {
-                if (adj.getData() == block.getData() + factor || block.getData() >= 8 && adj.getData() == factor) {
-                    count += removeChildFlows(adj, depth + 1);
-                    count++;
-                    adj.setType(Material.AIR);
-                    adj.setData((byte) 0);
-                }
-            }
-        }
-        Block below = block.getRelative(BlockFace.DOWN);
-        if (getStationaryMaterial(below.getType()) == getStationaryMaterial(block.getType())) {
-            if (below.getData() == block.getData() + 8 || below.getData() == block.getData()) {
-                count += removeChildFlows(below, depth + 1);
-                count++;
-                below.setType(Material.AIR);
-                below.setData((byte) 0);
-            }
-        }
-        return count;
-    }
-
-    public void simplifyBelow(Block b, boolean f) {
-        if (b.isLiquid()) {
-            if (b.getData() == 7) {
-                b.setType(Material.AIR);
-                b.setData((byte) 0);
-            }
-            else if (b.getData() == 15) {
-                b.setData((byte) 8);
-                if (f) {
-                    b.setType(getFlowingMaterial(b.getType()));
-                }
-                f = false;
-            }
-            simplifyBelow(b.getRelative(BlockFace.DOWN), f);
-        }
-    }
-
-    public void simplifyBelow(Block b) {
-        simplifyBelow(b, true);
-    }
-
-    public Material getFlowingMaterial(Material m) {
-        if (m == Material.WATER || m == Material.STATIONARY_WATER || m == Material.WATER_BUCKET) {
-            return Material.WATER;
-        }
-        if (m == Material.LAVA || m == Material.STATIONARY_LAVA || m == Material.LAVA_BUCKET) {
-            return Material.LAVA;
-        }
-        return null;
-    }
-
-    public Material getStationaryMaterial(Material m) {
-        if (m == Material.WATER || m == Material.STATIONARY_WATER || m == Material.WATER_BUCKET) {
-            return Material.STATIONARY_WATER;
-        }
-        if (m == Material.LAVA || m == Material.STATIONARY_LAVA || m == Material.LAVA_BUCKET) {
-            return Material.STATIONARY_LAVA;
-        }
-        return null;
-    }
-
-    public Material getBucketMaterial(Material m) {
-        if (m == Material.WATER || m == Material.STATIONARY_WATER || m == Material.WATER_BUCKET) {
-            return Material.WATER_BUCKET;
-        }
-        if (m == Material.LAVA || m == Material.STATIONARY_LAVA || m == Material.LAVA_BUCKET) {
-            return Material.LAVA_BUCKET;
-        }
-        return Material.BUCKET;
-    }
-
-    public String getVirtualName(Block b) {
-        if (getStationaryMaterial(b.getType()) == Material.STATIONARY_WATER) {
-            return "WaterFlow";
-        }
-        if (getStationaryMaterial(b.getType()) == Material.STATIONARY_LAVA) {
-            return "LavaFlow";
-        }
-        return null;
-    }
-
-    public boolean hasEdgeCap(Block block) {
-        Block above = block.getRelative(BlockFace.UP);
-        if (getStationaryMaterial(above.getType()) == getStationaryMaterial(block.getType())) {
-            if (above.getData() == block.getData()) {
-                return hasEdgeCap(above);
-            }
-            else if (above.getData() + 8 == block.getData()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public MovingObjectPosition raytrace(EntityHuman nmsPlayer, net.minecraft.server.v1_7_R3.World nmsWorld) {
@@ -547,7 +382,7 @@ public class SafeBuckets extends JavaPlugin {
             net.minecraft.server.v1_7_R3.Block block = nmsWorld.getType(l, i1, j1);
             int k1 = nmsWorld.getData(l, i1, j1);
 
-            if (block.a(k1, true) || isBlockSafe(nmsPlayer.getBukkitEntity().getWorld().getBlockAt(l, i1, j1))) {
+            if (block.a(k1, true) || FluidUtils.isBlockSafe(nmsPlayer.getBukkitEntity().getWorld().getBlockAt(l, i1, j1))) {
                 return block.a(nmsWorld, l, i1, j1, vec3d, vec3d1);
             }
 
@@ -680,7 +515,7 @@ public class SafeBuckets extends JavaPlugin {
                 net.minecraft.server.v1_7_R3.Block block1 = nmsWorld.getType(l, i1, j1);
                 int l1 = nmsWorld.getData(l, i1, j1);
 
-                if (block1.a(l1, true) || isBlockSafe(nmsPlayer.getBukkitEntity().getWorld().getBlockAt(l, i1, j1))) {
+                if (block1.a(l1, true) || FluidUtils.isBlockSafe(nmsPlayer.getBukkitEntity().getWorld().getBlockAt(l, i1, j1))) {
                     MovingObjectPosition movingobjectposition2 = block1.a(nmsWorld, l, i1, j1, vec3d, vec3d1);
 
                     if (movingobjectposition2 != null) {
@@ -690,6 +525,14 @@ public class SafeBuckets extends JavaPlugin {
             }
             return null;
         }
+    }
+    
+    public int setBlockSafe(Block block, boolean safe, boolean log) {
+        return setBlockSafe(block, safe, log, null);
+    }
+    
+    public int setBlockSafe(Block block, boolean safe, boolean log, Player player) {
+        return FluidUtils.setBlockSafe(block, safe, log, player, FLOW_MAX_DEPTH);
     }
 
     public int setRegionSafe(Location p1, Location p2, boolean safe, Player issuer) {
@@ -710,34 +553,6 @@ public class SafeBuckets extends JavaPlugin {
             }
         }
         return count;
-    }
-
-    public void queueSafeBlock(Block block, boolean log, Player player) {
-        blockCache.put(block.getLocation(), new SafeEntry(block.getWorld().getTime(), log, player));
-    }
-
-    public void registerBlock(Block block, boolean reg) {
-        TileEntityDispenser d = (TileEntityDispenser) ((CraftInventory) ((CraftDispenser) (Dispenser) block.getState()).getInventory()).getInventory();
-        boolean isNamed = d != null && !d.getInventoryName().endsWith("container.dispenser");
-        if (isRegistered(d)) {
-            if (!reg) {
-                d.a(isNamed ? d.getInventoryName().substring(registeredCode.length()) : null);
-            }
-        }
-        else if (reg) {
-            d.a(registeredCode + (isNamed ? d.getInventoryName() : "Dispenser"));
-        }
-    }
-
-    public boolean isRegistered(Block block) {
-        if (block.getType() == Material.DISPENSER) {
-            return isRegistered((TileEntityDispenser) ((CraftInventory) ((CraftDispenser) (Dispenser) block.getState()).getInventory()).getInventory());
-        }
-        return false;
-    }
-
-    public boolean isRegistered(TileEntityDispenser d) {
-        return d.getInventoryName().startsWith(registeredCode);
     }
 
     public void setToolStatus(Set<String> pList, String player, boolean status) {

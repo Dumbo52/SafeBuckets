@@ -13,38 +13,31 @@ import de.diddiz.LogBlock.LogBlock;
 
 public class EventLogger {
 
-    private final SafeBuckets plugin;
-    private Consumer lbConsumer;
+    private static Consumer lbConsumer;
 
-    private boolean useLogBlock;
-    private boolean usePrism;
+    private static boolean useLogBlock = false;
+    private static boolean usePrism = false;
 
-    public EventLogger(SafeBuckets pl) {
-        plugin = pl;
-        useLogBlock = false;
-        usePrism = false;
-    }
-
-    public void enableLogBlock(LogBlock lb) {
+    public static void enableLogBlock(LogBlock lb) {
         lbConsumer = lb.getConsumer();
         useLogBlock = true;
     }
 
-    public void enablePrism() {
+    public static void enablePrism() {
         usePrism = true;
     }
 
-    public boolean canLog() {
+    public static boolean canLog() {
         return useLogBlock || usePrism;
     }
 
-    public void logEvent(boolean log, Player player, BlockState before, Block after) {
+    public static void logEvent(boolean log, Player player, BlockState before, Block after) {
         if (log) {
             logEvent(player, before, after);
         }
     }
 
-    public void logEvent(Player player, BlockState before, Block after) {
+    public static void logEvent(Player player, BlockState before, Block after) {
         if (useLogBlock) {
             logEventWithLogBlock(player, before, after);
         }
@@ -53,8 +46,8 @@ public class EventLogger {
         }
     }
 
-    private void logEventWithLogBlock(Player player, BlockState before, Block after) {
-        Material mat = plugin.getStationaryMaterial(after.getType());
+    private static void logEventWithLogBlock(Player player, BlockState before, Block after) {
+        Material mat = FluidUtils.getStationaryMaterial(after.getType());
 
         String name;
         if (player == null) {
@@ -67,20 +60,20 @@ public class EventLogger {
         lbConsumer.queueBlockReplace(name, before, after.getState());
     }
 
-    private void logEventWithPrism(Player player, BlockState before, Block after) {
+    private static void logEventWithPrism(Player player, BlockState before, Block after) {
         String type;
-        Material mat = plugin.getStationaryMaterial(after.getType());
+        Material mat = FluidUtils.getStationaryMaterial(after.getType());
         Material beforeType = before.getType();
 
-        if (plugin.isBlockSafe(after) && (plugin.getStationaryMaterial(before.getType()) == after.getType())) {
+        if (FluidUtils.isBlockSafe(after) && (FluidUtils.getStationaryMaterial(before.getType()) == after.getType())) {
             type = "safebuckets-fluid-safe";
         }
-        else if (!plugin.isBlockSafe(after) && plugin.getStationaryMaterial(before.getType()) == plugin.getStationaryMaterial(after.getType()) && before.getRawData() == 15) {
+        else if (!FluidUtils.isBlockSafe(after) && FluidUtils.getStationaryMaterial(before.getType()) == FluidUtils.getStationaryMaterial(after.getType()) && before.getRawData() == 15) {
             type = "safebuckets-fluid-unsafe";
-            beforeType = plugin.getStationaryMaterial(beforeType);
+            beforeType = FluidUtils.getStationaryMaterial(beforeType);
         }
         else {
-            type = ((plugin.getStationaryMaterial(before.getType()) == Material.STATIONARY_WATER || plugin.getStationaryMaterial(before.getType()) == Material.STATIONARY_LAVA) && after.getType() == Material.AIR) ? "bucket-fill" : before.getType() == Material.ICE && mat == Material.STATIONARY_WATER ? "block-fade" : mat == Material.STATIONARY_WATER ? "water-bucket" : mat == Material.STATIONARY_LAVA ? "lava-bucket" : "block-place";
+            type = ((FluidUtils.getStationaryMaterial(before.getType()) == Material.STATIONARY_WATER || FluidUtils.getStationaryMaterial(before.getType()) == Material.STATIONARY_LAVA) && after.getType() == Material.AIR) ? "bucket-fill" : before.getType() == Material.ICE && mat == Material.STATIONARY_WATER ? "block-fade" : mat == Material.STATIONARY_WATER ? "water-bucket" : mat == Material.STATIONARY_LAVA ? "lava-bucket" : "block-place";
         }
 
         String name;
@@ -90,7 +83,7 @@ public class EventLogger {
         else {
             name = player.getName();
         }
-
+        System.out.println(type + ", " + after + ", " + beforeType + ", " + before + ", " + after + ", " + name);
         RecordingQueue.addToQueue(ActionFactory.createBlockChange(type, after.getLocation(), beforeType.getId(), before.getRawData(), after.getTypeId(), after.getData(), name));
     }
 }
